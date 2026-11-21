@@ -617,13 +617,27 @@ public final class SkillsPanelClient {
         gg.pose().popPose();
     }
 
-    private static Component drawHoverStat(GuiGraphics gg, Component currentTooltip, net.minecraft.client.Minecraft mc, int mouseX, int mouseY, int baseX, int baseY, String text, int color, float scale, int yOffset) {
-        int y = baseY + yOffset;
-        int w = (int) (mc.font.width(text) * scale);
-        boolean hovered = mouseX >= baseX && mouseX <= baseX + w + 2 && mouseY >= y && mouseY <= y + 7;
-        drawScaledText(gg, mc, text, baseX, y, color, hovered ? scale * 1.05F : scale);
-        if (currentTooltip == null && hovered) return Component.literal(text);
-        return currentTooltip;
+    private static Component drawAttributeRow(GuiGraphics gg, Component currentTooltip, net.minecraft.client.Minecraft mc, int mouseX, int mouseY,
+                                              int x, int y, int right, String label, String value, int valueColor, String source) {
+        boolean hovered = mouseX >= x && mouseX <= right && mouseY >= y && mouseY <= y + 8;
+        if (hovered) gg.fill(x, y, right, y + 8, 0x40999999);
+        int textY = hovered ? y - 1 : y;
+        drawScaledText(gg, mc, label, x + 2, textY + 1, 0xFF9C9C9C, 0.65F);
+        int valueX = right - 2 - (int) (mc.font.width(value) * 0.65F);
+        drawScaledText(gg, mc, value, valueX, textY + 1, valueColor, 0.65F, hovered);
+        return hovered && currentTooltip == null ? Component.literal("Source: " + source) : currentTooltip;
+    }
+
+    private static void drawOutlinedLevel(GuiGraphics gg, net.minecraft.client.Minecraft mc, String level, int centerX, int y) {
+        float scale = 1.65F;
+        int width = (int) (mc.font.width(level) * scale);
+        int x = centerX - width / 2;
+        for (int offsetX = -1; offsetX <= 1; offsetX++) {
+            for (int offsetY = -1; offsetY <= 1; offsetY++) {
+                if (offsetX != 0 || offsetY != 0) drawScaledText(gg, mc, level, x + offsetX, y + offsetY, 0xFF5A4200, scale, true);
+            }
+        }
+        drawScaledText(gg, mc, level, x, y, 0xFFFFD45E, scale, true);
     }
 
     private static Component tooltipIfHovered(Component currentTooltip, net.minecraft.client.Minecraft mc, int mouseX, int mouseY, int x, int y, String text, float scale) {
@@ -659,22 +673,20 @@ public final class SkillsPanelClient {
         int luckLevel = skills.level(SkillId.LUCK);
         double leechChance = skills.level(SkillId.HEALTH_BOOST) > 0 ? SkillBalance.lifeLeach(luckLevel) * 100.0D : 0.0D;
 
-        int textX = st.bg.getX() + 11;
-        int textY = st.bg.getY() + 18;
+        int textX = st.bg.getX() + 9;
+        int textY = st.bg.getY() + 29;
+        int textRight = st.bg.getX() + PANEL_W - 9;
         int lineH = 9;
-        float scale = 0.65F;
-        String levelText = Component.translatable("gui.aura.player.level", LevelUpApi.getLevel(player)).getString();
-        drawScaledText(gg, mc, levelText, st.bg.getX() + 14, st.bg.getY() + 10, 0xFFE08A, 0.75F);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mc, mouseX, mouseY, st.bg.getX() + 14, st.bg.getY() + 10, levelText, 0.75F);
-        hoveredTooltip = drawHoverStat(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY, Component.translatable("gui.aura.player.base_damage", fmt(baseDamage)).getString(), 0xFF8080, scale, lineH * 0);
-        hoveredTooltip = drawHoverStat(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY, Component.translatable("gui.aura.player.crit_power", fmt(critPower) + "x").getString(), 0xFFD580, scale, lineH * 1);
-        hoveredTooltip = drawHoverStat(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY, Component.translatable("gui.aura.player.ability_power", fmt(abilityPower)).getString(), 0xC78CFF, scale, lineH * 2);
-        hoveredTooltip = drawHoverStat(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY, Component.translatable("gui.aura.player.defence", defence).getString(), 0x8CD3FF, scale, lineH * 3);
-        hoveredTooltip = drawHoverStat(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY, Component.translatable("gui.aura.player.speed", fmt(speed)).getString(), 0x99FFB6, scale, lineH * 4);
-        hoveredTooltip = drawHoverStat(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY, Component.translatable("gui.aura.player.leeching", fmt(leechChance) + "%").getString(), 0xFF9CC8, scale, lineH * 5);
-        hoveredTooltip = drawHoverStat(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY, Component.translatable("gui.aura.player.health", fmt(maxHealth)).getString(), 0xFFB3B3, scale, lineH * 6);
+        drawOutlinedLevel(gg, mc, Integer.toString(LevelUpApi.getLevel(player)), st.bg.getX() + PANEL_W / 2, st.bg.getY() + 6);
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 0, textRight, "Attack Damage", fmt(baseDamage), 0xFF8080, "Player attack-damage attribute");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 1, textRight, "Crit Power", fmt(critPower) + "x", 0xFFD580, "Critical Power skill");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 2, textRight, "Ability Power", fmt(abilityPower), 0xC78CFF, "Ability Power attribute");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 3, textRight, "Defence", Integer.toString(defence), 0x8CD3FF, "Equipped armor");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 4, textRight, "Speed", fmt(speed), 0x99FFB6, "Movement Speed attribute");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 5, textRight, "Leeching", fmt(leechChance) + "%", 0xFF9CC8, "Luck and Health Boost skills");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 6, textRight, "Health", fmt(maxHealth), 0xFFB3B3, "Max Health attribute");
 
-        int listY = st.bg.getY() + 85;
+        int listY = st.bg.getY() + 96;
         int leftColX = st.bg.getX() + 11;
         int rightColX = st.bg.getX() + 80;
         String abilitiesHdr = Component.translatable("gui.aura.player.selected_abilities").getString();

@@ -14,6 +14,7 @@ import net.revilodev.aura.effect.CodexPotions;
 import net.revilodev.aura.entity.ModEntities;
 import net.revilodev.aura.item.ModItems;
 import net.revilodev.aura.particle.ModParticles;
+import net.revilodev.aura.particle.FireAuraEffectConfig;
 import net.revilodev.aura.skills.SkillsAttachments;
 import net.revilodev.aura.skills.SkillConfig;
 import net.revilodev.aura.skills.SkillsEvents;
@@ -37,8 +38,11 @@ public final class CodexMod {
         // server configs
         container.registerConfig(ModConfig.Type.SERVER, SkillConfig.SPEC);
         container.registerConfig(ModConfig.Type.SERVER, AbilityConfig.SPEC, MOD_ID + "-abilities-server.toml");
+        container.registerConfig(ModConfig.Type.SERVER, FireAuraEffectConfig.SPEC, MOD_ID + "-effects-server.toml");
         modBus.addListener(AbilityConfig::onConfigLoading);
         modBus.addListener(AbilityConfig::onConfigReloading);
+        modBus.addListener(FireAuraEffectConfig::onConfigLoading);
+        modBus.addListener(FireAuraEffectConfig::onConfigReloading);
 
         // player data and packets
         SkillsAttachments.REGISTER.register(modBus);

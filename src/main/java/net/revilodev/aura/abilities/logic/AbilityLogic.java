@@ -13,9 +13,15 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.revilodev.aura.abilities.AbilitiesAttachments;
@@ -31,6 +37,8 @@ import net.revilodev.aura.skills.PlayerSkills;
 import net.revilodev.aura.skills.SkillsAttachments;
 import net.revilodev.aura.stats.CodexStats;
 import net.revilodev.aura.entity.projectile.BurstCubeProjectile;
+import net.revilodev.aura.particle.FireAuraEffectConfig;
+import net.revilodev.aura.particle.FireAuraEffectSettings;
 import net.revilodev.aura.particle.ModParticles;
 
 import java.util.Comparator;
@@ -44,6 +52,7 @@ import java.util.UUID;
 public final class AbilityLogic {
     private static final Map<UUID, UUID> BLOOD_DRAIN_TARGETS = new HashMap<>();
     private static final Map<UUID, ShockwaveState> FORCE_SHOCKWAVES = new HashMap<>();
+    private static final Map<UUID, FireAuraCookState> FIRE_AURA_COOK_TICKS = new HashMap<>();
     private static final ThreadLocal<AbilityElement> DAMAGE_ELEMENT = new ThreadLocal<>();
     private static final ThreadLocal<ServerPlayer> DAMAGE_ATTACKER = new ThreadLocal<>();
 
@@ -621,9 +630,16 @@ public final class AbilityLogic {
         int elapsed = Math.max(1, totalDuration - abilities.activeTicks(id));
         double maxRadius = AbilityScaling.auraRadius(coreRank, finalForm);
         double pulseRadius = maxRadius * ((((elapsed - 1) % 20) + 1) / 20.0D);
-        spawnPulseRing(level, player.position().add(0.0D, 0.15D, 0.0D), pulseRadius, particleForElement(id.element(), finalForm));
+        if (id.element() == AbilityElement.FIRE && !finalForm) {
+            spawnFireAuraPulseRing(level, player, pulseRadius, maxRadius);
+        } else {
+            spawnPulseRing(level, player.position().add(0.0D, 0.15D, 0.0D), pulseRadius, particleForElement(id.element(), finalForm));
+        }
         if (id.element() == AbilityElement.POISON && finalForm && elapsed % 2 == 0) {
             spawnPulseRing(level, player.position().add(0.0D, 0.25D, 0.0D), pulseRadius * 0.92D, ModParticles.POISON.get());
+        }
+        if (id.element() == AbilityElement.FIRE) {
+            tickFireAuraCooking(level, player, maxRadius);
         }
         if (elapsed % 20 != 0) return;
 
@@ -632,8 +648,43 @@ public final class AbilityLogic {
         if (finalForm && id.element() == AbilityElement.FIRE) damage *= 2.0F;
         int effectDuration = AbilityScaling.durationTicks(id, coreRank, abilityPower);
         for (LivingEntity target : nearby(player, maxRadius)) {
+            if (!auraCanReach(player, target.getBoundingBox().getCenter())) continue;
             applyElementHit(player, id.element(), target, damage, effectDuration, finalForm);
         }
+    }
+
+    private static void tickFireAuraCooking(ServerLevel level, ServerPlayer player, double radius) {
+        long gameTime = level.getGameTime();
+        for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(radius),
+                entity -> entity.isAlive() && entity.getItem().is(Items.CHICKEN))) {
+            if (!auraCanReach(player, item.position())) continue;
+
+            FireAuraCookState previous = FIRE_AURA_COOK_TICKS.get(item.getUUID());
+            int exposedTicks = previous == null ? 1
+                    : previous.lastExposedTick() == gameTime ? previous.exposedTicks()
+                    : previous.lastExposedTick() == gameTime - 1L ? previous.exposedTicks() + 1 : 1;
+            if (exposedTicks < 60) {
+                FIRE_AURA_COOK_TICKS.put(item.getUUID(), new FireAuraCookState(gameTime, exposedTicks));
+                continue;
+            }
+
+            ItemStack chicken = item.getItem();
+            item.setItem(new ItemStack(Items.COOKED_CHICKEN, chicken.getCount()));
+            FIRE_AURA_COOK_TICKS.remove(item.getUUID());
+            level.sendParticles(ParticleTypes.FLAME, item.getX(), item.getY() + 0.12D, item.getZ(), 8, 0.12D, 0.06D, 0.12D, 0.01D);
+            level.sendParticles(ParticleTypes.SMOKE, item.getX(), item.getY() + 0.15D, item.getZ(), 5, 0.10D, 0.05D, 0.10D, 0.01D);
+            level.playSound(null, item.blockPosition(), SoundEvents.GENERIC_BURN, SoundSource.PLAYERS, 0.45F, 1.25F);
+        }
+        FIRE_AURA_COOK_TICKS.entrySet().removeIf(entry -> entry.getValue().lastExposedTick() < gameTime - 200L);
+    }
+
+    private static boolean auraCanReach(ServerPlayer player, Vec3 target) {
+        Vec3 origin = player.position().add(0.0D, 0.25D, 0.0D);
+        Vec3 destination = new Vec3(target.x, origin.y, target.z);
+        if (origin.distanceToSqr(destination) < 1.0E-4D) return true;
+        BlockHitResult hit = player.level().clip(new ClipContext(origin, destination,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS;
     }
 
     private static void tickBloodDrain(ServerPlayer player, AbilityId id, PlayerAbilities abilities, PlayerSkills skills) {
@@ -755,6 +806,42 @@ public final class AbilityLogic {
             double z = center.z + Math.sin(angle) * radius;
             level.sendParticles(particle, x, center.y, z, 1, 0.0D, 0.025D, 0.0D, 0.0D);
         }
+    }
+
+    private static void spawnFireAuraPulseRing(ServerLevel level, ServerPlayer player, double radius, double maxRadius) {
+        Vec3 center = player.position();
+        FireAuraEffectSettings settings = FireAuraEffectConfig.settings();
+        int points = Math.max(settings.minimumRingPoints(), (int) Math.ceil(radius * settings.ringPointsPerBlock()));
+        ParticleOptions particle = fireAuraParticle(radius / maxRadius, settings);
+        for (int i = 0; i < points; i++) {
+            double angle = (Math.PI * 2.0D * i) / points;
+            double x = center.x + Math.cos(angle) * radius;
+            double z = center.z + Math.sin(angle) * radius;
+            Vec3 surface = fireAuraSurface(level, player, center, x, z);
+            if (surface == null) continue;
+
+            double outwardX = Math.cos(angle);
+            double outwardZ = Math.sin(angle);
+            level.sendParticles(particle, surface.x, surface.y + 0.025D, surface.z, 1,
+                    outwardX, 0.0D, outwardZ, settings.particleSpeed());
+        }
+    }
+
+    private static Vec3 fireAuraSurface(ServerLevel level, ServerPlayer player, Vec3 center, double x, double z) {
+        Vec3 waveHeight = center.add(0.0D, 0.25D, 0.0D);
+        BlockHitResult wallHit = level.clip(new ClipContext(waveHeight, new Vec3(x, waveHeight.y, z),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        if (wallHit.getType() == HitResult.Type.BLOCK) return null;
+
+        BlockHitResult groundHit = level.clip(new ClipContext(new Vec3(x, center.y + 2.0D, z), new Vec3(x, center.y - 8.0D, z),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return groundHit.getType() == HitResult.Type.BLOCK ? groundHit.getLocation() : null;
+    }
+
+    private static ParticleOptions fireAuraParticle(double waveProgress, FireAuraEffectSettings settings) {
+        if (waveProgress < settings.lightBandEnd()) return ModParticles.FIRE_AURA_EMBER_LIGHT.get();
+        if (waveProgress < settings.midBandEnd()) return ModParticles.FIRE_AURA_EMBER_MID.get();
+        return ModParticles.FIRE_AURA_EMBER_DARK.get();
     }
 
     private static void spawnNovaRing(ServerPlayer player, double radius, ParticleOptions particle) {
@@ -917,6 +1004,9 @@ public final class AbilityLogic {
             this.totalDuration = totalDuration;
             this.hits = hits;
         }
+    }
+
+    private record FireAuraCookState(long lastExposedTick, int exposedTicks) {
     }
 
     private static boolean hurtWithAbility(ServerPlayer player, LivingEntity target, AbilityElement element, DamageSource source, float damage) {

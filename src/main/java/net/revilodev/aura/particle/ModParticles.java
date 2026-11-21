@@ -18,6 +18,9 @@ public final class ModParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> PLASMA_STRIKE = REGISTER.register("plasma_strike", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> PLASMA_BLAST = REGISTER.register("plasma_blast", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FIRE_EMBER = REGISTER.register("fire_ember", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FIRE_AURA_EMBER_LIGHT = REGISTER.register("fire_aura_ember_light", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FIRE_AURA_EMBER_MID = REGISTER.register("fire_aura_ember_mid", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FIRE_AURA_EMBER_DARK = REGISTER.register("fire_aura_ember_dark", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SOUL_FIRE_EMBER = REGISTER.register("soul_fire_ember", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> ICICLE = REGISTER.register("icicle", () -> new SimpleParticleType(false));
 

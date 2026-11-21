@@ -6,6 +6,8 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.revilodev.aura.client.screen.StandaloneSkillsBookScreen;
 import net.revilodev.aura.client.toast.LevelUpToast;
+import net.revilodev.aura.client.particle.FireAuraEmberParticle;
+import net.revilodev.aura.particle.FireAuraEffectSettings;
 
 @OnlyIn(Dist.CLIENT)
 // client runtime bridge impl
@@ -34,5 +36,9 @@ public final class ClientRuntimeBridgeImpl {
             return;
         }
         LevelUpToast.show(oldLevel, newLevel, skillPointsGained, abilityPointsGained);
+    }
+
+    public static void applyFireAuraEffectSettings(FireAuraEffectSettings settings) {
+        FireAuraEmberParticle.applySettings(settings);
     }
 }

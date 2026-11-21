@@ -16,6 +16,8 @@ import net.revilodev.aura.abilities.event.AbilitySwitchEvent;
 import net.revilodev.aura.attributes.CodexAttributes;
 import net.revilodev.aura.abilities.logic.AbilityLogic;
 import net.revilodev.aura.abilities.logic.AbilitySyncEvents;
+import net.revilodev.aura.particle.FireAuraEffectConfig;
+import net.revilodev.aura.particle.FireAuraEffectSettings;
 import net.neoforged.neoforge.common.NeoForge;
 
 // abilities network
@@ -31,6 +33,7 @@ public final class AbilitiesNetwork {
 
         PayloadRegistrar registrar = event.registrar(CodexMod.MOD_ID).versioned(VERSION);
         registrar.playToClient(AbilitiesSyncPayload.TYPE, AbilitiesSyncPayload.STREAM_CODEC, AbilitiesNetwork::handleSync);
+        registrar.playToClient(FireAuraEffectSyncPayload.TYPE, FireAuraEffectSyncPayload.STREAM_CODEC, AbilitiesNetwork::handleFireAuraEffectSync);
         registrar.playToServer(AbilityActionPayload.TYPE, AbilityActionPayload.STREAM_CODEC, AbilitiesNetwork::handleAction);
         registrar.playToServer(AbilityUsePayload.TYPE, AbilityUsePayload.STREAM_CODEC, AbilitiesNetwork::handleUse);
     }
@@ -38,6 +41,11 @@ public final class AbilitiesNetwork {
     public static void syncTo(ServerPlayer player) {
         PlayerAbilities abilities = player.getData(AbilitiesAttachments.PLAYER_ABILITIES.get());
         PacketDistributor.sendToPlayer(player, new AbilitiesSyncPayload(abilities.serializeNBT(player.level().registryAccess())));
+        PacketDistributor.sendToPlayer(player, new FireAuraEffectSyncPayload(FireAuraEffectConfig.settings()));
+    }
+
+    public static void syncFireAuraEffectToAll() {
+        PacketDistributor.sendToAllPlayers(new FireAuraEffectSyncPayload(FireAuraEffectConfig.settings()));
     }
 
     private static void handleSync(AbilitiesSyncPayload payload, IPayloadContext ctx) {
@@ -49,6 +57,10 @@ public final class AbilitiesNetwork {
             if (tag == null) tag = new CompoundTag();
             abilities.deserializeNBT(player.level().registryAccess(), tag);
         });
+    }
+
+    private static void handleFireAuraEffectSync(FireAuraEffectSyncPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> ClientRuntimeBridge.applyFireAuraEffectSettings(payload.settings()));
     }
 
     private static void handleAction(AbilityActionPayload payload, IPayloadContext ctx) {
@@ -135,6 +147,65 @@ public final class AbilitiesNetwork {
         @Override
         public Type<? extends CustomPacketPayload> type() {
             return TYPE;
+        }
+    }
+
+    public record FireAuraEffectSyncPayload(FireAuraEffectSettings settings) implements CustomPacketPayload {
+        public static final Type<FireAuraEffectSyncPayload> TYPE =
+                new Type<>(ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "fire_aura_effect_sync"));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, FireAuraEffectSyncPayload> STREAM_CODEC =
+                StreamCodec.of(
+                        (buf, msg) -> writeSettings(buf, msg.settings()),
+                        buf -> new FireAuraEffectSyncPayload(readSettings(buf))
+                );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+
+        private static void writeSettings(RegistryFriendlyByteBuf buf, FireAuraEffectSettings settings) {
+            buf.writeVarInt(settings.minimumRingPoints());
+            buf.writeDouble(settings.ringPointsPerBlock());
+            buf.writeDouble(settings.particleSpeed());
+            buf.writeDouble(settings.lightBandEnd());
+            buf.writeDouble(settings.midBandEnd());
+            buf.writeDouble(settings.redAccentChance());
+            writeStyle(buf, settings.light());
+            writeStyle(buf, settings.mid());
+            writeStyle(buf, settings.dark());
+        }
+
+        private static FireAuraEffectSettings readSettings(RegistryFriendlyByteBuf buf) {
+            int minimumRingPoints = buf.readVarInt();
+            double ringPointsPerBlock = buf.readDouble();
+            double particleSpeed = buf.readDouble();
+            double lightBandEnd = buf.readDouble();
+            double midBandEnd = buf.readDouble();
+            double redAccentChance = buf.readDouble();
+            return new FireAuraEffectSettings(minimumRingPoints, ringPointsPerBlock, particleSpeed, lightBandEnd, midBandEnd,
+                    redAccentChance, readStyle(buf), readStyle(buf), readStyle(buf));
+        }
+
+        private static void writeStyle(RegistryFriendlyByteBuf buf, FireAuraEffectSettings.EmberStyle style) {
+            buf.writeFloat(style.minScale());
+            buf.writeFloat(style.maxScale());
+            buf.writeFloat(style.minAlpha());
+            buf.writeFloat(style.maxAlpha());
+            buf.writeFloat(style.minRed());
+            buf.writeFloat(style.maxRed());
+            buf.writeFloat(style.minGreen());
+            buf.writeFloat(style.maxGreen());
+            buf.writeFloat(style.minBlue());
+            buf.writeFloat(style.maxBlue());
+        }
+
+        private static FireAuraEffectSettings.EmberStyle readStyle(RegistryFriendlyByteBuf buf) {
+            return new FireAuraEffectSettings.EmberStyle(
+                    buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+                    buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat()
+            );
         }
     }
 

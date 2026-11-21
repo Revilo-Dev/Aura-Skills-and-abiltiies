@@ -183,10 +183,17 @@ public final class SkillListWidget extends AbstractWidget {
             } else {
                 tex = (selected == def.id() || hovered) ? WIDGET_HOVER_TEX : WIDGET_TEX;
             }
-            drawScaledTile(gg, tex, x, y, CELL_SIZE, CELL_SIZE);
-            int iconX = x + (CELL_SIZE - ICON_SIZE) / 2;
-            int iconY = y + (CELL_SIZE - ICON_SIZE) / 2;
+            boolean unavailable = tex.equals(WIDGET_DISABLED_TEX) || tex.equals(WIDGET_DISABLED_HOVER_TEX) || tex.equals(WIDGET_PRIMARY_DISABLED_TEX);
+            int shakeX = hovered && unavailable ? (int) Math.round(Math.sin(mc.player.tickCount * 1.8D)) : 0;
+            float hoverScale = hovered ? 1.05F : 1.0F;
+            gg.pose().pushPose();
+            gg.pose().translate(x + CELL_SIZE / 2.0F + shakeX, y + CELL_SIZE / 2.0F, 0.0F);
+            gg.pose().scale(hoverScale, hoverScale, 1.0F);
+            drawScaledTile(gg, tex, -CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
+            int iconX = -ICON_SIZE / 2;
+            int iconY = -ICON_SIZE / 2;
             gg.blit(def.icon(), iconX, iconY, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            gg.pose().popPose();
             if (hovered) {
                 Component name = Component.literal(def.title()).withStyle(def.primary() ? ChatFormatting.GOLD : ChatFormatting.WHITE);
                 hoveredTooltip = List.of(

@@ -389,11 +389,27 @@ public final class StandaloneSkillsBookScreen extends Screen {
         gg.pose().popPose();
     }
 
-    private void drawHoverStat(GuiGraphics gg, int mouseX, int mouseY, int baseX, int baseY, String text, int color, float scale, int yOffset) {
-        int y = baseY + yOffset;
-        int w = (int) (font.width(text) * scale);
-        boolean hovered = mouseX >= baseX && mouseX <= baseX + w + 2 && mouseY >= y && mouseY <= y + 7;
-        drawScaledText(gg, text, baseX, y, color, hovered ? scale * 1.05F : scale);
+    private Component drawAttributeRow(GuiGraphics gg, Component currentTooltip, int mouseX, int mouseY, int x, int y, int right,
+                                       String label, String value, int valueColor, String source) {
+        boolean hovered = mouseX >= x && mouseX <= right && mouseY >= y && mouseY <= y + 8;
+        if (hovered) gg.fill(x, y, right, y + 8, 0x40999999);
+        int textY = hovered ? y - 1 : y;
+        drawScaledText(gg, label, x + 2, textY + 1, 0xFF9C9C9C, 0.65F);
+        int valueX = right - 2 - (int) (font.width(value) * 0.65F);
+        drawScaledText(gg, value, valueX, textY + 1, valueColor, 0.65F, hovered);
+        return hovered && currentTooltip == null ? Component.literal("Source: " + source) : currentTooltip;
+    }
+
+    private void drawOutlinedLevel(GuiGraphics gg, String level, int centerX, int y) {
+        float scale = 1.65F;
+        int width = (int) (font.width(level) * scale);
+        int x = centerX - width / 2;
+        for (int offsetX = -1; offsetX <= 1; offsetX++) {
+            for (int offsetY = -1; offsetY <= 1; offsetY++) {
+                if (offsetX != 0 || offsetY != 0) drawScaledText(gg, level, x + offsetX, y + offsetY, 0xFF5A4200, scale, true);
+            }
+        }
+        drawScaledText(gg, level, x, y, 0xFFFFD45E, scale, true);
     }
 
     private Component tooltipIfHovered(Component currentTooltip, int mouseX, int mouseY, int x, int y, String text, float scale) {
@@ -428,36 +444,20 @@ public final class StandaloneSkillsBookScreen extends Screen {
         int luckLevel = skills.level(SkillId.LUCK);
         double leechChance = skills.level(SkillId.HEALTH_BOOST) > 0 ? SkillBalance.lifeLeach(luckLevel) * 100.0D : 0.0D;
 
-        int textX = panelX + 11;
-        int textY = panelY + 18;
+        int textX = panelX + 9;
+        int textY = panelY + 29;
+        int textRight = panelX + panelWidth - 9;
         int lineH = 9;
-        float scale = 0.65F;
-        String levelText = Component.translatable("gui.aura.player.level", LevelUpApi.getLevel(player)).getString();
-        drawScaledText(gg, levelText, panelX + 14, panelY + 10, 0xFFE08A, 0.75F);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mouseX, mouseY, panelX + 14, panelY + 10, levelText, 0.75F);
-        String stat0 = Component.translatable("gui.aura.player.base_damage", fmt(baseDamage)).getString();
-        String stat1 = Component.translatable("gui.aura.player.crit_power", fmt(critPower) + "x").getString();
-        String stat2 = Component.translatable("gui.aura.player.ability_power", fmt(abilityPower)).getString();
-        String stat3 = Component.translatable("gui.aura.player.defence", defence).getString();
-        String stat4 = Component.translatable("gui.aura.player.speed", fmt(speed)).getString();
-        String stat5 = Component.translatable("gui.aura.player.leeching", fmt(leechChance) + "%").getString();
-        String stat6 = Component.translatable("gui.aura.player.health", fmt(maxHealth)).getString();
-        drawHoverStat(gg, mouseX, mouseY, textX, textY, stat0, 0xFF8080, scale, lineH * 0);
-        drawHoverStat(gg, mouseX, mouseY, textX, textY, stat1, 0xFFD580, scale, lineH * 1);
-        drawHoverStat(gg, mouseX, mouseY, textX, textY, stat2, 0xC78CFF, scale, lineH * 2);
-        drawHoverStat(gg, mouseX, mouseY, textX, textY, stat3, 0x8CD3FF, scale, lineH * 3);
-        drawHoverStat(gg, mouseX, mouseY, textX, textY, stat4, 0x99FFB6, scale, lineH * 4);
-        drawHoverStat(gg, mouseX, mouseY, textX, textY, stat5, 0xFF9CC8, scale, lineH * 5);
-        drawHoverStat(gg, mouseX, mouseY, textX, textY, stat6, 0xFFB3B3, scale, lineH * 6);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 0, stat0, scale);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 1, stat1, scale);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 2, stat2, scale);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 3, stat3, scale);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 4, stat4, scale);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 5, stat5, scale);
-        hoveredTooltip = tooltipIfHovered(hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 6, stat6, scale);
+        drawOutlinedLevel(gg, Integer.toString(LevelUpApi.getLevel(player)), panelX + panelWidth / 2, panelY + 6);
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 0, textRight, "Attack Damage", fmt(baseDamage), 0xFF8080, "Player attack-damage attribute");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 1, textRight, "Crit Power", fmt(critPower) + "x", 0xFFD580, "Critical Power skill");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 2, textRight, "Ability Power", fmt(abilityPower), 0xC78CFF, "Ability Power attribute");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 3, textRight, "Defence", Integer.toString(defence), 0x8CD3FF, "Equipped armor");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 4, textRight, "Speed", fmt(speed), 0x99FFB6, "Movement Speed attribute");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 5, textRight, "Leeching", fmt(leechChance) + "%", 0xFF9CC8, "Luck and Health Boost skills");
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 6, textRight, "Health", fmt(maxHealth), 0xFFB3B3, "Max Health attribute");
 
-        int listY = panelY + 85;
+        int listY = panelY + 96;
         int leftColX = panelX + 11;
         int rightColX = panelX + 80;
         String abilitiesHdr = Component.translatable("gui.aura.player.selected_abilities").getString();

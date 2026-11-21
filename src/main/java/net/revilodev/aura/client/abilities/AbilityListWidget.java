@@ -274,15 +274,22 @@ public final class AbilityListWidget extends AbstractWidget {
             if (maxed && !primary) {
                 tex = (selected == def.id() || hovered) ? WIDGET_PRIMARY_HOVER_TEX : WIDGET_PRIMARY_TEX;
             }
-            drawScaledTile(gg, tex, x, y, CELL_SIZE, CELL_SIZE);
-            gg.blit(def.id().iconTexture(finalForm), x + 3, y + 3, 0, 0, 16, 16, 16, 16);
+            boolean unavailable = tex.equals(WIDGET_DISABLED_TEX) || tex.equals(WIDGET_DISABLED_HOVER_TEX) || tex.equals(WIDGET_PRIMARY_DISABLED_TEX);
+            int shakeX = hovered && unavailable ? (int) Math.round(Math.sin(mc.player.tickCount * 1.8D)) : 0;
+            float hoverScale = hovered ? 1.05F : 1.0F;
+            gg.pose().pushPose();
+            gg.pose().translate(x + CELL_SIZE / 2.0F + shakeX, y + CELL_SIZE / 2.0F, 0.0F);
+            gg.pose().scale(hoverScale, hoverScale, 1.0F);
+            drawScaledTile(gg, tex, -CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
+            gg.blit(def.id().iconTexture(finalForm), -CELL_SIZE / 2 + 3, -CELL_SIZE / 2 + 3, 0, 0, 16, 16, 16, 16);
             if (affinityLocked) {
-                gg.blit(LOCKED_TEX, x + 3, y + 3, 0, 0, 16, 16, 16, 16);
+                gg.blit(LOCKED_TEX, -CELL_SIZE / 2 + 3, -CELL_SIZE / 2 + 3, 0, 0, 16, 16, 16, 16);
             }
+            gg.pose().popPose();
             if (!creative && primary && AbilityConfig.switchCooldownsEnabled() && switchCooldown > 0) {
-                gg.fill(x + 2, y + 2, x + CELL_SIZE - 2, y + CELL_SIZE - 2, 0xA0000000);
+                gg.fill(x + shakeX + 2, y + 2, x + shakeX + CELL_SIZE - 2, y + CELL_SIZE - 2, 0xA0000000);
                 String remaining = ((switchCooldown + 19) / 20) + "s";
-                int textX = x + (CELL_SIZE - mc.font.width(remaining)) / 2;
+                int textX = x + shakeX + (CELL_SIZE - mc.font.width(remaining)) / 2;
                 int textY = y + (CELL_SIZE - mc.font.lineHeight) / 2;
                 gg.drawString(mc.font, remaining, textX, textY, 0xFFFFFFFF, true);
             }

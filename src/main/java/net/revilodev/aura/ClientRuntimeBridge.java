@@ -3,6 +3,7 @@ package net.revilodev.aura;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.revilodev.aura.particle.FireAuraEffectSettings;
 
 import java.lang.reflect.Method;
 
@@ -29,6 +30,10 @@ public final class ClientRuntimeBridge {
         invoke("showLevelUpToast", int.class, int.class, int.class, int.class, oldLevel, newLevel, skillPointsGained, abilityPointsGained);
     }
 
+    public static void applyFireAuraEffectSettings(FireAuraEffectSettings settings) {
+        invoke("applyFireAuraEffectSettings", FireAuraEffectSettings.class, settings);
+    }
+
     private static Object invoke(String methodName, Class<?>[] parameterTypes, Object... args) {
         if (FMLEnvironment.dist != Dist.CLIENT) {
             return null;
@@ -44,6 +49,10 @@ public final class ClientRuntimeBridge {
 
     private static Object invoke(String methodName, Object... args) {
         return invoke(methodName, new Class<?>[0], args);
+    }
+
+    private static Object invoke(String methodName, Class<?> parameterType, Object arg) {
+        return invoke(methodName, new Class<?>[]{parameterType}, arg);
     }
 
     private static Object invoke(String methodName, Class<?> a, Class<?> b, Class<?> c, Class<?> d, Object... args) {
