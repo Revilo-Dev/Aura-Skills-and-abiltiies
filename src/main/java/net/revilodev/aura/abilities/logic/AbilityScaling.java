@@ -3,6 +3,9 @@ package net.revilodev.aura.abilities.logic;
 import net.revilodev.aura.abilities.AbilityConfig;
 import net.revilodev.aura.abilities.AbilityElement;
 import net.revilodev.aura.abilities.AbilityId;
+import net.revilodev.aura.abilities.event.AbilityCooldownCalculationEvent;
+import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.common.NeoForge;
 import net.revilodev.aura.skills.PlayerSkills;
 
 import java.util.Locale;
@@ -25,6 +28,14 @@ public final class AbilityScaling {
         out *= AbilityConfig.cooldownMultiplier();
         int minimum = id == AbilityId.FORCE_RAMPAGE ? 1800 : 10;
         return Math.max(minimum, (int) Math.round(out));
+    }
+
+    public static int cooldownTicks(AbilityId id, int rank, PlayerSkills skills, Player player) {
+        int base = cooldownTicks(id, rank, skills);
+        int reduced = (int) Math.round(base * (1.0D - CooldownReductionEnchantmentEvents.reduction(player)));
+        AbilityCooldownCalculationEvent event = new AbilityCooldownCalculationEvent(player, id, base, reduced);
+        NeoForge.EVENT_BUS.post(event);
+        return Math.max(0, event.getCooldownTicks());
     }
 
     public static float damage(AbilityId id, int coreRank, double abilityPower) {
@@ -72,7 +83,11 @@ public final class AbilityScaling {
     }
 
     public static double masteryResistance(int coreRank) {
-        return Math.min(0.75D, Math.max(0, coreRank) * 0.05D);
+        return Math.min(1.0D, Math.max(0, coreRank) * 0.05D);
+    }
+
+    public static double masteryResistance(AbilityId mastery, int coreRank) {
+        return coreRank >= mastery.maxRank() ? 1.0D : masteryResistance(coreRank);
     }
 
     public static double masteryPowerMultiplier(AbilityElement element, int coreRank) {

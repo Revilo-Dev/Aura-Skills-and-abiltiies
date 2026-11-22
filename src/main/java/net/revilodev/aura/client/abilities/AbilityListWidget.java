@@ -2,6 +2,7 @@ package net.revilodev.aura.client.abilities;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -9,6 +10,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -80,6 +82,8 @@ public final class AbilityListWidget extends AbstractWidget {
     private final Consumer<AbilityDefinition> onClick;
     private final List<Node> nodes = new ArrayList<>();
     private AbilityId selected;
+    private AbilityId hoveredAbility;
+    private int unavailableClickShakeUntil;
     private boolean headerVisible = true;
     private boolean showLocked = true;
     private int offsetX = 0;
@@ -275,7 +279,8 @@ public final class AbilityListWidget extends AbstractWidget {
                 tex = (selected == def.id() || hovered) ? WIDGET_PRIMARY_HOVER_TEX : WIDGET_PRIMARY_TEX;
             }
             boolean unavailable = tex.equals(WIDGET_DISABLED_TEX) || tex.equals(WIDGET_DISABLED_HOVER_TEX) || tex.equals(WIDGET_PRIMARY_DISABLED_TEX);
-            int shakeX = hovered && unavailable ? (int) Math.round(Math.sin(mc.player.tickCount * 1.8D)) : 0;
+            int shakeX = hovered && unavailable && mc.player.tickCount < unavailableClickShakeUntil
+                    ? (int) Math.round(Math.sin(mc.player.tickCount * 1.8D)) : 0;
             float hoverScale = hovered ? 1.05F : 1.0F;
             gg.pose().pushPose();
             gg.pose().translate(x + CELL_SIZE / 2.0F + shakeX, y + CELL_SIZE / 2.0F, 0.0F);
@@ -294,6 +299,10 @@ public final class AbilityListWidget extends AbstractWidget {
                 gg.drawString(mc.font, remaining, textX, textY, 0xFFFFFFFF, true);
             }
             if (hovered) {
+                if (hoveredAbility != def.id()) {
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 1.35F));
+                }
+                hoveredAbility = def.id();
                 int lvl = abilities.rank(def.id().core());
                 Component name = Component.literal(def.id().title(finalForm)).withStyle(def.type() == net.revilodev.aura.abilities.AbilityNodeType.CORE ? ChatFormatting.GOLD : ChatFormatting.WHITE);
                 List<Component> tooltip = new ArrayList<>();
@@ -318,6 +327,7 @@ public final class AbilityListWidget extends AbstractWidget {
                 hoveredTooltip = tooltip;
             }
         }
+        if (hoveredTooltip == null) hoveredAbility = null;
         gg.disableScissor();
         if (hoveredTooltip != null) {
             gg.pose().pushPose();
@@ -343,12 +353,18 @@ public final class AbilityListWidget extends AbstractWidget {
         // select first then send action
         selected = node.def.id();
         if (onClick != null) onClick.accept(node.def);
-        if (!AuraClientConfig.abilityEnabled(node.def.id())) return true;
-        if (AbilityConfig.affinityLocked(abilities, node.def.id())) return true;
+        if (!AuraClientConfig.abilityEnabled(node.def.id()) || AbilityConfig.affinityLocked(abilities, node.def.id())) {
+            unavailableClickShakeUntil = mc.player.tickCount + 8;
+            return true;
+        }
         boolean isCore = node.def.type() == net.revilodev.aura.abilities.AbilityNodeType.CORE;
         boolean isSpecialization = node.def.type() == net.revilodev.aura.abilities.AbilityNodeType.SPECIALIZATION;
-        if (editLocked) return true;
+        if (editLocked) {
+            unavailableClickShakeUntil = mc.player.tickCount + 8;
+            return true;
+        }
         if (isCore) {
+            if (button == 0 && !abilities.canUpgrade(node.def.id(), mc.player.isCreative())) unavailableClickShakeUntil = mc.player.tickCount + 8;
             if (button == 0) {
                 PacketDistributor.sendToServer(new AbilitiesNetwork.AbilityActionPayload(0, node.def.id().ordinal()));
             } else if (button == 1) {
@@ -448,10 +464,10 @@ public final class AbilityListWidget extends AbstractWidget {
         if (id.isCore()) {
             String stat = id.element() == AbilityElement.WIND ? "Power" : "Damage";
             out.add(new StatPart(stat + " +" + fmt(AbilityScaling.masteryDamageBonus(level) * 100.0D) + "%", ChatFormatting.RED));
-            out.add(new StatPart("PvP Resistance +" + fmt(AbilityScaling.masteryResistance(level) * 100.0D) + "%", ChatFormatting.BLUE));
+            out.add(new StatPart("Resistance +" + fmt(AbilityScaling.masteryResistance(id.core(), level) * 100.0D) + "%", ChatFormatting.BLUE));
             return out;
         }
-        int cooldownTicks = mc.player != null && mc.player.isCreative() ? 0 : AbilityScaling.cooldownTicks(id, level, skills);
+        int cooldownTicks = AbilityScaling.cooldownTicks(id, level, skills, mc.player);
         out.add(new StatPart("Cooldown " + formatSeconds(cooldownTicks), ChatFormatting.YELLOW));
 
         // default stat triplet

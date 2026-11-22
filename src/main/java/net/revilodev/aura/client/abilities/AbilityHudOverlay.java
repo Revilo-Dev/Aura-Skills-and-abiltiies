@@ -168,7 +168,7 @@ public final class AbilityHudOverlay {
         int remaining = minecraft.player != null && minecraft.player.isCreative() ? 0 : abilities.cooldownTicks(id);
         if (remaining > 0) {
             int rank = Math.max(1, abilities.rank(id));
-            int max = Math.max(1, AbilityScaling.cooldownTicks(id, rank, skills));
+            int max = Math.max(1, AbilityScaling.cooldownTicks(id, rank, skills, minecraft.player));
             int overlay = (int) Math.ceil(16.0D * remaining / (double) max);
             gg.fill(drawX + 2, y + 18 - overlay, drawX + 18, y + 18, 0xA0000000);
             if (AbilityConfig.hudTimerText()) {

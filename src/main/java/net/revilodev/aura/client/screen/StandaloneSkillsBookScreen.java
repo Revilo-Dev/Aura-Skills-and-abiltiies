@@ -394,7 +394,7 @@ public final class StandaloneSkillsBookScreen extends Screen {
         boolean hovered = mouseX >= x && mouseX <= right && mouseY >= y && mouseY <= y + 8;
         if (hovered) gg.fill(x, y, right, y + 8, 0x40999999);
         int textY = hovered ? y - 1 : y;
-        drawScaledText(gg, label, x + 2, textY + 1, 0xFF9C9C9C, 0.65F);
+        drawScaledText(gg, label, x + 2, textY + 1, valueColor == 0xFF8D8D8D ? 0xFF707070 : 0xFFC2C2C2, 0.65F);
         int valueX = right - 2 - (int) (font.width(value) * 0.65F);
         drawScaledText(gg, value, valueX, textY + 1, valueColor, 0.65F, hovered);
         return hovered && currentTooltip == null ? Component.literal("Source: " + source) : currentTooltip;
@@ -445,11 +445,17 @@ public final class StandaloneSkillsBookScreen extends Screen {
         double leechChance = skills.level(SkillId.HEALTH_BOOST) > 0 ? SkillBalance.lifeLeach(luckLevel) * 100.0D : 0.0D;
 
         int textX = panelX + 9;
-        int textY = panelY + 29;
+        int textY = panelY + 42;
         int textRight = panelX + panelWidth - 9;
         int lineH = 9;
-        drawOutlinedLevel(gg, Integer.toString(LevelUpApi.getLevel(player)), panelX + panelWidth / 2, panelY + 6);
-        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 0, textRight, "Attack Damage", fmt(baseDamage), 0xFF8080, "Player attack-damage attribute");
+        int displayedLevel = LevelUpApi.levelForTotalXp(LevelUpApi.getXp(player));
+        drawOutlinedLevel(gg, Integer.toString(displayedLevel), panelX + panelWidth / 2, panelY + 16);
+        int xpX = panelX + 19;
+        int xpY = panelY + 34;
+        int xpWidth = panelWidth - 38;
+        gg.fill(xpX, xpY, xpX + xpWidth, xpY + 3, 0xFF3A3A3A);
+        gg.fill(xpX + 1, xpY + 1, xpX + 1 + Math.round((xpWidth - 2) * LevelUpApi.getProgressToNextLevel(player)), xpY + 2, 0xFF76B8FF);
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 0, textRight, "Attack Damage", fmt(baseDamage), 0xFF8D8D8D, "Player attack-damage attribute");
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 1, textRight, "Crit Power", fmt(critPower) + "x", 0xFFD580, "Critical Power skill");
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 2, textRight, "Ability Power", fmt(abilityPower), 0xC78CFF, "Ability Power attribute");
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 3, textRight, "Defence", Integer.toString(defence), 0x8CD3FF, "Equipped armor");
@@ -457,7 +463,7 @@ public final class StandaloneSkillsBookScreen extends Screen {
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 5, textRight, "Leeching", fmt(leechChance) + "%", 0xFF9CC8, "Luck and Health Boost skills");
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mouseX, mouseY, textX, textY + lineH * 6, textRight, "Health", fmt(maxHealth), 0xFFB3B3, "Max Health attribute");
 
-        int listY = panelY + 96;
+        int listY = panelY + 109;
         int leftColX = panelX + 11;
         int rightColX = panelX + 80;
         String abilitiesHdr = Component.translatable("gui.aura.player.selected_abilities").getString();

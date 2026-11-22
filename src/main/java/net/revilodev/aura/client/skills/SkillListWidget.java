@@ -2,12 +2,14 @@ package net.revilodev.aura.client.skills;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -41,6 +43,8 @@ public final class SkillListWidget extends AbstractWidget {
             ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "textures/gui/sprites/skill_widget-primary-disabled.png");
     private static final ResourceLocation WIDGET_PRIMARY_HOVER_TEX =
             ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "textures/gui/sprites/skill_widget_primary-hovered.png");
+    private static final ResourceLocation WIDGET_MAX_TEX =
+            ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "textures/gui/sprites/skill_widget-max.png");
     private static final ResourceLocation LINK_TEX =
             ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "textures/gui/sprites/link.png");
     private static final ResourceLocation LINK_DISABLED_TEX =
@@ -60,7 +64,9 @@ public final class SkillListWidget extends AbstractWidget {
     private final Consumer<SkillDefinition> onClick;
     private final List<Node> nodes = new ArrayList<>();
     private SkillId selected;
+    private SkillId hoveredSkill;
     private boolean headerVisible = true;
+    private int unavailableClickShakeUntil;
 
     public SkillListWidget(int x, int y, int w, int h, Consumer<SkillDefinition> onClick) {
         super(x, y, w, h, Component.empty());
@@ -134,6 +140,7 @@ public final class SkillListWidget extends AbstractWidget {
         boolean editLocked = CodexAttributes.isAbilitySkillEditLocked(mc.player);
         boolean creative = mc.player.isCreative();
         List<Component> hoveredTooltip = null;
+        SkillId currentHoveredSkill = null;
 
         // header points
         if (headerVisible) {
@@ -178,13 +185,16 @@ public final class SkillListWidget extends AbstractWidget {
                 tex = WIDGET_PRIMARY_DISABLED_TEX;
             } else if (editLocked || !unlocked) {
                 tex = hovered ? WIDGET_DISABLED_HOVER_TEX : WIDGET_DISABLED_TEX;
+            } else if (!def.primary() && learned && ps.level(def.id()) >= def.maxLevel()) {
+                tex = WIDGET_MAX_TEX;
             } else if (def.primary()) {
                 tex = (selected == def.id() || hovered) ? WIDGET_PRIMARY_HOVER_TEX : WIDGET_PRIMARY_TEX;
             } else {
                 tex = (selected == def.id() || hovered) ? WIDGET_HOVER_TEX : WIDGET_TEX;
             }
             boolean unavailable = tex.equals(WIDGET_DISABLED_TEX) || tex.equals(WIDGET_DISABLED_HOVER_TEX) || tex.equals(WIDGET_PRIMARY_DISABLED_TEX);
-            int shakeX = hovered && unavailable ? (int) Math.round(Math.sin(mc.player.tickCount * 1.8D)) : 0;
+            int shakeX = hovered && unavailable && mc.player.tickCount < unavailableClickShakeUntil
+                    ? (int) Math.round(Math.sin(mc.player.tickCount * 1.8D)) : 0;
             float hoverScale = hovered ? 1.05F : 1.0F;
             gg.pose().pushPose();
             gg.pose().translate(x + CELL_SIZE / 2.0F + shakeX, y + CELL_SIZE / 2.0F, 0.0F);
@@ -195,6 +205,10 @@ public final class SkillListWidget extends AbstractWidget {
             gg.blit(def.icon(), iconX, iconY, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
             gg.pose().popPose();
             if (hovered) {
+                currentHoveredSkill = def.id();
+                if (hoveredSkill != def.id()) {
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 1.35F));
+                }
                 Component name = Component.literal(def.title()).withStyle(def.primary() ? ChatFormatting.GOLD : ChatFormatting.WHITE);
                 hoveredTooltip = List.of(
                         Component.empty()
@@ -206,6 +220,7 @@ public final class SkillListWidget extends AbstractWidget {
                 );
             }
         }
+        hoveredSkill = currentHoveredSkill;
         gg.disableScissor();
         if (hoveredTooltip != null) {
             gg.pose().pushPose();
@@ -235,6 +250,11 @@ public final class SkillListWidget extends AbstractWidget {
             selected = null;
             if (onClick != null) onClick.accept(null);
             return true;
+        }
+
+        if (!AuraClientConfig.skillEnabled(node.def.id()) || CodexAttributes.isAbilitySkillEditLocked(mc.player)
+                || (!node.def.primary() && !mc.player.getData(SkillsAttachments.PLAYER_SKILLS.get()).canUnlock(node.def.id()))) {
+            unavailableClickShakeUntil = mc.player.tickCount + 8;
         }
 
         // select first then send action

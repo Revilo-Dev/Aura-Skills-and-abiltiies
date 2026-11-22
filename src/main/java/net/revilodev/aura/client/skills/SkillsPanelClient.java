@@ -572,7 +572,6 @@ public final class SkillsPanelClient {
                 ? mc.player.getData(AbilitiesAttachments.PLAYER_ABILITIES.get()).points()
                 : mc.player.getData(SkillsAttachments.PLAYER_SKILLS.get()).points();
 
-        String label = Component.translatable(abilitiesTab ? "gui.aura.points.ability" : "gui.aura.points.skill", points).getString();
         float scale = 0.85F;
         int x = st.skillsList.getX() + 13;
         int y = (abilitiesTab ? st.abilityList.getY() : st.skillsList.getY()) + 4;
@@ -583,7 +582,8 @@ public final class SkillsPanelClient {
         gg.pose().pushPose();
         gg.pose().translate(x, y, 0.0F);
         gg.pose().scale(scale, scale, 1.0F);
-        gg.drawString(mc.font, label, 0, 0, color, false);
+        gg.drawString(mc.font, "+", 0, 0, 0xFFFFFFFF, false);
+        gg.drawString(mc.font, Integer.toString(points), mc.font.width("+") + 2, 0, color, false);
         gg.pose().popPose();
     }
 
@@ -622,7 +622,7 @@ public final class SkillsPanelClient {
         boolean hovered = mouseX >= x && mouseX <= right && mouseY >= y && mouseY <= y + 8;
         if (hovered) gg.fill(x, y, right, y + 8, 0x40999999);
         int textY = hovered ? y - 1 : y;
-        drawScaledText(gg, mc, label, x + 2, textY + 1, 0xFF9C9C9C, 0.65F);
+        drawScaledText(gg, mc, label, x + 2, textY + 1, valueColor == 0xFF8D8D8D ? 0xFF707070 : 0xFFC2C2C2, 0.65F);
         int valueX = right - 2 - (int) (mc.font.width(value) * 0.65F);
         drawScaledText(gg, mc, value, valueX, textY + 1, valueColor, 0.65F, hovered);
         return hovered && currentTooltip == null ? Component.literal("Source: " + source) : currentTooltip;
@@ -674,11 +674,17 @@ public final class SkillsPanelClient {
         double leechChance = skills.level(SkillId.HEALTH_BOOST) > 0 ? SkillBalance.lifeLeach(luckLevel) * 100.0D : 0.0D;
 
         int textX = st.bg.getX() + 9;
-        int textY = st.bg.getY() + 29;
+        int textY = st.bg.getY() + 42;
         int textRight = st.bg.getX() + PANEL_W - 9;
         int lineH = 9;
-        drawOutlinedLevel(gg, mc, Integer.toString(LevelUpApi.getLevel(player)), st.bg.getX() + PANEL_W / 2, st.bg.getY() + 6);
-        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 0, textRight, "Attack Damage", fmt(baseDamage), 0xFF8080, "Player attack-damage attribute");
+        int displayedLevel = LevelUpApi.levelForTotalXp(LevelUpApi.getXp(player));
+        drawOutlinedLevel(gg, mc, Integer.toString(displayedLevel), st.bg.getX() + PANEL_W / 2, st.bg.getY() + 16);
+        int xpX = st.bg.getX() + 19;
+        int xpY = st.bg.getY() + 34;
+        int xpWidth = PANEL_W - 38;
+        gg.fill(xpX, xpY, xpX + xpWidth, xpY + 3, 0xFF3A3A3A);
+        gg.fill(xpX + 1, xpY + 1, xpX + 1 + Math.round((xpWidth - 2) * LevelUpApi.getProgressToNextLevel(player)), xpY + 2, 0xFF76B8FF);
+        hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 0, textRight, "Attack Damage", fmt(baseDamage), 0xFF8D8D8D, "Player attack-damage attribute");
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 1, textRight, "Crit Power", fmt(critPower) + "x", 0xFFD580, "Critical Power skill");
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 2, textRight, "Ability Power", fmt(abilityPower), 0xC78CFF, "Ability Power attribute");
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 3, textRight, "Defence", Integer.toString(defence), 0x8CD3FF, "Equipped armor");
@@ -686,7 +692,7 @@ public final class SkillsPanelClient {
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 5, textRight, "Leeching", fmt(leechChance) + "%", 0xFF9CC8, "Luck and Health Boost skills");
         hoveredTooltip = drawAttributeRow(gg, hoveredTooltip, mc, mouseX, mouseY, textX, textY + lineH * 6, textRight, "Health", fmt(maxHealth), 0xFFB3B3, "Max Health attribute");
 
-        int listY = st.bg.getY() + 96;
+        int listY = st.bg.getY() + 109;
         int leftColX = st.bg.getX() + 11;
         int rightColX = st.bg.getX() + 80;
         String abilitiesHdr = Component.translatable("gui.aura.player.selected_abilities").getString();

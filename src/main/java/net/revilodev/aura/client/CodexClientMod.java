@@ -54,7 +54,24 @@ public final class CodexClientMod {
         event.registerSpriteSet(ModParticles.FIRE_AURA_EMBER_LIGHT.get(), FireAuraEmberParticle.LightProvider::new);
         event.registerSpriteSet(ModParticles.FIRE_AURA_EMBER_MID.get(), FireAuraEmberParticle.MidProvider::new);
         event.registerSpriteSet(ModParticles.FIRE_AURA_EMBER_DARK.get(), FireAuraEmberParticle.DarkProvider::new);
+        registerAuraEmberPalette(event, ModParticles.SOUL_FIRE_AURA_EMBER_LIGHT.get(), ModParticles.SOUL_FIRE_AURA_EMBER_MID.get(), ModParticles.SOUL_FIRE_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.SOUL_FIRE);
+        registerAuraEmberPalette(event, ModParticles.ICE_AURA_EMBER_LIGHT.get(), ModParticles.ICE_AURA_EMBER_MID.get(), ModParticles.ICE_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.ICE);
+        registerAuraEmberPalette(event, ModParticles.FROST_AURA_EMBER_LIGHT.get(), ModParticles.FROST_AURA_EMBER_MID.get(), ModParticles.FROST_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.FROST);
+        registerAuraEmberPalette(event, ModParticles.LIGHTNING_AURA_EMBER_LIGHT.get(), ModParticles.LIGHTNING_AURA_EMBER_MID.get(), ModParticles.LIGHTNING_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.LIGHTNING);
+        registerAuraEmberPalette(event, ModParticles.PLASMA_AURA_EMBER_LIGHT.get(), ModParticles.PLASMA_AURA_EMBER_MID.get(), ModParticles.PLASMA_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.PLASMA);
+        registerAuraEmberPalette(event, ModParticles.POISON_AURA_EMBER_LIGHT.get(), ModParticles.POISON_AURA_EMBER_MID.get(), ModParticles.POISON_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.POISON);
+        registerAuraEmberPalette(event, ModParticles.TOXIN_AURA_EMBER_LIGHT.get(), ModParticles.TOXIN_AURA_EMBER_MID.get(), ModParticles.TOXIN_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.TOXIN);
         event.registerSpriteSet(ModParticles.SOUL_FIRE_EMBER.get(), SnowflakeParticle.Provider::new);
         event.registerSpriteSet(ModParticles.ICICLE.get(), IcicleParticle.Provider::new);
+    }
+
+    private static void registerAuraEmberPalette(RegisterParticleProvidersEvent event,
+                                                  net.minecraft.core.particles.SimpleParticleType light,
+                                                  net.minecraft.core.particles.SimpleParticleType mid,
+                                                  net.minecraft.core.particles.SimpleParticleType dark,
+                                                  FireAuraEmberParticle.Palette palette) {
+        event.registerSpriteSet(light, sprites -> new FireAuraEmberParticle.Provider(sprites, palette, FireAuraEmberParticle.Band.LIGHT));
+        event.registerSpriteSet(mid, sprites -> new FireAuraEmberParticle.Provider(sprites, palette, FireAuraEmberParticle.Band.MID));
+        event.registerSpriteSet(dark, sprites -> new FireAuraEmberParticle.Provider(sprites, palette, FireAuraEmberParticle.Band.DARK));
     }
 }

@@ -133,7 +133,7 @@ public final class AuraBookSettingsModel {
         for (SkillCategory category : SkillCategory.values()) {
             rows.add(mastery(category.title(), () -> boolState(AuraClientConfig.skillMasteryEnabled(category)), button -> AuraClientConfig.toggleSkillMastery(category)));
             for (SkillId id : SkillId.values()) {
-                if (id.category() == category) {
+                if (id.category() == category && !id.primary()) {
                     rows.add(row(id.title(), id.icon(), () -> boolState(AuraClientConfig.skillEnabled(id)), button -> AuraClientConfig.toggleSkill(id)));
                 }
             }
@@ -143,7 +143,7 @@ public final class AuraBookSettingsModel {
         for (AbilityElement element : AbilityElement.values()) {
             rows.add(mastery(title(element), AbilityId.valueOf(element.name()).iconTexture(), () -> boolState(AuraClientConfig.abilityMasteryEnabled(element)), button -> AuraClientConfig.toggleAbilityMastery(element)));
             for (AbilityId id : AbilityId.values()) {
-                if (id.element() == element) {
+                if (id.element() == element && !id.isCore()) {
                     rows.add(row(id.title(), id.iconTexture(), () -> boolState(AuraClientConfig.abilityEnabled(id)), button -> AuraClientConfig.toggleAbility(id)));
                 }
             }

@@ -78,7 +78,7 @@ public final class AbilityLogic {
         if (!execute(player, id, coreRank, preEvent.getAbilityPower(), finalForm)) return false;
         if (!player.isCreative() && AbilityConfig.abilityXpConsumptionEnabled()) player.giveExperiencePoints(-xpCost);
         if (player.isCreative()) abilities.setCooldown(id, 0);
-        else abilities.setCooldown(id, AbilityScaling.cooldownTicks(id, coreRank, skills));
+        else abilities.setCooldown(id, AbilityScaling.cooldownTicks(id, coreRank, skills, player));
         if (player.gameMode.isSurvival() && AbilityConfig.switchCooldownsEnabled()) {
             abilities.setSwitchCooldownTicks(id.core(), AbilityConfig.survivalSwitchCooldownTicks());
         }
@@ -630,13 +630,9 @@ public final class AbilityLogic {
         int elapsed = Math.max(1, totalDuration - abilities.activeTicks(id));
         double maxRadius = AbilityScaling.auraRadius(coreRank, finalForm);
         double pulseRadius = maxRadius * ((((elapsed - 1) % 20) + 1) / 20.0D);
-        if (id.element() == AbilityElement.FIRE && !finalForm) {
-            spawnFireAuraPulseRing(level, player, pulseRadius, maxRadius);
-        } else {
-            spawnPulseRing(level, player.position().add(0.0D, 0.15D, 0.0D), pulseRadius, particleForElement(id.element(), finalForm));
-        }
-        if (id.element() == AbilityElement.POISON && finalForm && elapsed % 2 == 0) {
-            spawnPulseRing(level, player.position().add(0.0D, 0.25D, 0.0D), pulseRadius * 0.92D, ModParticles.POISON.get());
+        spawnAuraPulseRing(level, player, pulseRadius, maxRadius, id.element(), finalForm);
+        if (elapsed % 4 == 0) {
+            spawnAuraAccentRing(level, player.position().add(0.0D, 0.18D, 0.0D), 1.05D, id.element(), finalForm);
         }
         if (id.element() == AbilityElement.FIRE) {
             tickFireAuraCooking(level, player, maxRadius);
@@ -650,6 +646,8 @@ public final class AbilityLogic {
         for (LivingEntity target : nearby(player, maxRadius)) {
             if (!auraCanReach(player, target.getBoundingBox().getCenter())) continue;
             applyElementHit(player, id.element(), target, damage, effectDuration, finalForm);
+            spawnAuraAccentRing(level, target.position().add(0.0D, 0.10D, 0.0D),
+                    Math.max(0.55D, target.getBbWidth() * 0.7D), id.element(), finalForm);
         }
     }
 
@@ -808,16 +806,17 @@ public final class AbilityLogic {
         }
     }
 
-    private static void spawnFireAuraPulseRing(ServerLevel level, ServerPlayer player, double radius, double maxRadius) {
+    private static void spawnAuraPulseRing(ServerLevel level, ServerPlayer player, double radius, double maxRadius,
+                                           AbilityElement element, boolean finalForm) {
         Vec3 center = player.position();
         FireAuraEffectSettings settings = FireAuraEffectConfig.settings();
         int points = Math.max(settings.minimumRingPoints(), (int) Math.ceil(radius * settings.ringPointsPerBlock()));
-        ParticleOptions particle = fireAuraParticle(radius / maxRadius, settings);
+        ParticleOptions particle = auraParticle(element, finalForm, radius / maxRadius, settings);
         for (int i = 0; i < points; i++) {
             double angle = (Math.PI * 2.0D * i) / points;
             double x = center.x + Math.cos(angle) * radius;
             double z = center.z + Math.sin(angle) * radius;
-            Vec3 surface = fireAuraSurface(level, player, center, x, z);
+            Vec3 surface = auraWaveSurface(level, player, center, x, z);
             if (surface == null) continue;
 
             double outwardX = Math.cos(angle);
@@ -827,7 +826,7 @@ public final class AbilityLogic {
         }
     }
 
-    private static Vec3 fireAuraSurface(ServerLevel level, ServerPlayer player, Vec3 center, double x, double z) {
+    private static Vec3 auraWaveSurface(ServerLevel level, ServerPlayer player, Vec3 center, double x, double z) {
         Vec3 waveHeight = center.add(0.0D, 0.25D, 0.0D);
         BlockHitResult wallHit = level.clip(new ClipContext(waveHeight, new Vec3(x, waveHeight.y, z),
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
@@ -838,10 +837,44 @@ public final class AbilityLogic {
         return groundHit.getType() == HitResult.Type.BLOCK ? groundHit.getLocation() : null;
     }
 
-    private static ParticleOptions fireAuraParticle(double waveProgress, FireAuraEffectSettings settings) {
-        if (waveProgress < settings.lightBandEnd()) return ModParticles.FIRE_AURA_EMBER_LIGHT.get();
-        if (waveProgress < settings.midBandEnd()) return ModParticles.FIRE_AURA_EMBER_MID.get();
-        return ModParticles.FIRE_AURA_EMBER_DARK.get();
+    private static ParticleOptions auraParticle(AbilityElement element, boolean finalForm, double waveProgress, FireAuraEffectSettings settings) {
+        int band = waveProgress < settings.lightBandEnd() ? 0 : waveProgress < settings.midBandEnd() ? 1 : 2;
+        return switch (element) {
+            case FIRE -> finalForm ? auraParticleBand(band, ModParticles.SOUL_FIRE_AURA_EMBER_LIGHT.get(), ModParticles.SOUL_FIRE_AURA_EMBER_MID.get(), ModParticles.SOUL_FIRE_AURA_EMBER_DARK.get())
+                    : auraParticleBand(band, ModParticles.FIRE_AURA_EMBER_LIGHT.get(), ModParticles.FIRE_AURA_EMBER_MID.get(), ModParticles.FIRE_AURA_EMBER_DARK.get());
+            case ICE -> finalForm ? auraParticleBand(band, ModParticles.FROST_AURA_EMBER_LIGHT.get(), ModParticles.FROST_AURA_EMBER_MID.get(), ModParticles.FROST_AURA_EMBER_DARK.get())
+                    : auraParticleBand(band, ModParticles.ICE_AURA_EMBER_LIGHT.get(), ModParticles.ICE_AURA_EMBER_MID.get(), ModParticles.ICE_AURA_EMBER_DARK.get());
+            case LIGHTNING -> finalForm ? auraParticleBand(band, ModParticles.PLASMA_AURA_EMBER_LIGHT.get(), ModParticles.PLASMA_AURA_EMBER_MID.get(), ModParticles.PLASMA_AURA_EMBER_DARK.get())
+                    : auraParticleBand(band, ModParticles.LIGHTNING_AURA_EMBER_LIGHT.get(), ModParticles.LIGHTNING_AURA_EMBER_MID.get(), ModParticles.LIGHTNING_AURA_EMBER_DARK.get());
+            case POISON -> finalForm ? auraParticleBand(band, ModParticles.TOXIN_AURA_EMBER_LIGHT.get(), ModParticles.TOXIN_AURA_EMBER_MID.get(), ModParticles.TOXIN_AURA_EMBER_DARK.get())
+                    : auraParticleBand(band, ModParticles.POISON_AURA_EMBER_LIGHT.get(), ModParticles.POISON_AURA_EMBER_MID.get(), ModParticles.POISON_AURA_EMBER_DARK.get());
+            default -> particleForElement(element, finalForm);
+        };
+    }
+
+    private static ParticleOptions auraParticleBand(int band, ParticleOptions light, ParticleOptions mid, ParticleOptions dark) {
+        return switch (band) {
+            case 0 -> light;
+            case 1 -> mid;
+            default -> dark;
+        };
+    }
+
+    private static void spawnAuraAccentRing(ServerLevel level, Vec3 center, double radius, AbilityElement element, boolean finalForm) {
+        ParticleOptions particle = switch (element) {
+            case ICE -> ParticleTypes.SNOWFLAKE;
+            case LIGHTNING -> finalForm ? ModParticles.PLASMA_STRIKE.get() : ParticleTypes.ELECTRIC_SPARK;
+            case POISON -> finalForm ? ModParticles.TOXIN.get() : ModParticles.POISON.get();
+            default -> null;
+        };
+        if (particle == null) return;
+
+        int points = Math.max(10, (int) Math.ceil(radius * 12.0D));
+        for (int i = 0; i < points; i++) {
+            double angle = (Math.PI * 2.0D * i) / points;
+            level.sendParticles(particle, center.x + Math.cos(angle) * radius, center.y, center.z + Math.sin(angle) * radius,
+                    1, 0.0D, 0.015D, 0.0D, 0.0D);
+        }
     }
 
     private static void spawnNovaRing(ServerPlayer player, double radius, ParticleOptions particle) {

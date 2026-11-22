@@ -34,7 +34,7 @@ public final class AbilityCombatEvents {
         ServerPlayer abilityAttacker = AbilityLogic.currentDamageAttacker();
         if (damageElement != null && abilityAttacker != null && abilityAttacker != target) {
             AbilityId mastery = AbilityId.valueOf(damageElement.name());
-            double resistance = AbilityScaling.masteryResistance(abilities.rank(mastery));
+            double resistance = AbilityScaling.masteryResistance(mastery, abilities.rank(mastery));
             event.setAmount((float) (event.getAmount() * (1.0D - resistance)));
         }
         int charges = abilities.activeTicks(AbilityId.FORCE_AEGIS);

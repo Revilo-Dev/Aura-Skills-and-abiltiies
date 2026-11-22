@@ -264,10 +264,10 @@ public final class AbilityDetailsPanel extends AbstractWidget {
         if (id.isCore()) {
             String stat = id.element() == net.revilodev.aura.abilities.AbilityElement.WIND ? "Power" : "Damage";
             out.add(new StatPart(stat + " +" + fmt(AbilityScaling.masteryDamageBonus(level) * 100.0D) + "%", 0xFF6A6A));
-            out.add(new StatPart("PvP Resistance +" + fmt(AbilityScaling.masteryResistance(level) * 100.0D) + "%", 0x6AB2FF));
+            out.add(new StatPart("Resistance +" + fmt(AbilityScaling.masteryResistance(id.core(), level) * 100.0D) + "%", 0x6AB2FF));
             return out;
         }
-        int cooldownTicks = mc.player != null && mc.player.isCreative() ? 0 : AbilityScaling.cooldownTicks(id, level, skills);
+        int cooldownTicks = AbilityScaling.cooldownTicks(id, level, skills, mc.player);
         out.add(new StatPart("Cooldown " + formatSeconds(cooldownTicks), 0xF0D15C));
 
         String durationText = "Duration " + formatSeconds(AbilityScaling.durationTicks(id, level, 1.0D));

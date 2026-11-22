@@ -21,6 +21,27 @@ public final class ModParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FIRE_AURA_EMBER_LIGHT = REGISTER.register("fire_aura_ember_light", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FIRE_AURA_EMBER_MID = REGISTER.register("fire_aura_ember_mid", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FIRE_AURA_EMBER_DARK = REGISTER.register("fire_aura_ember_dark", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SOUL_FIRE_AURA_EMBER_LIGHT = REGISTER.register("soul_fire_aura_ember_light", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SOUL_FIRE_AURA_EMBER_MID = REGISTER.register("soul_fire_aura_ember_mid", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SOUL_FIRE_AURA_EMBER_DARK = REGISTER.register("soul_fire_aura_ember_dark", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> ICE_AURA_EMBER_LIGHT = REGISTER.register("ice_aura_ember_light", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> ICE_AURA_EMBER_MID = REGISTER.register("ice_aura_ember_mid", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> ICE_AURA_EMBER_DARK = REGISTER.register("ice_aura_ember_dark", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FROST_AURA_EMBER_LIGHT = REGISTER.register("frost_aura_ember_light", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FROST_AURA_EMBER_MID = REGISTER.register("frost_aura_ember_mid", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FROST_AURA_EMBER_DARK = REGISTER.register("frost_aura_ember_dark", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> LIGHTNING_AURA_EMBER_LIGHT = REGISTER.register("lightning_aura_ember_light", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> LIGHTNING_AURA_EMBER_MID = REGISTER.register("lightning_aura_ember_mid", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> LIGHTNING_AURA_EMBER_DARK = REGISTER.register("lightning_aura_ember_dark", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> PLASMA_AURA_EMBER_LIGHT = REGISTER.register("plasma_aura_ember_light", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> PLASMA_AURA_EMBER_MID = REGISTER.register("plasma_aura_ember_mid", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> PLASMA_AURA_EMBER_DARK = REGISTER.register("plasma_aura_ember_dark", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> POISON_AURA_EMBER_LIGHT = REGISTER.register("poison_aura_ember_light", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> POISON_AURA_EMBER_MID = REGISTER.register("poison_aura_ember_mid", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> POISON_AURA_EMBER_DARK = REGISTER.register("poison_aura_ember_dark", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> TOXIN_AURA_EMBER_LIGHT = REGISTER.register("toxin_aura_ember_light", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> TOXIN_AURA_EMBER_MID = REGISTER.register("toxin_aura_ember_mid", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> TOXIN_AURA_EMBER_DARK = REGISTER.register("toxin_aura_ember_dark", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SOUL_FIRE_EMBER = REGISTER.register("soul_fire_ember", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> ICICLE = REGISTER.register("icicle", () -> new SimpleParticleType(false));
 

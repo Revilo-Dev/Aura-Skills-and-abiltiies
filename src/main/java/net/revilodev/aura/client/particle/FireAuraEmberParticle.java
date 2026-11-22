@@ -20,10 +20,10 @@ public final class FireAuraEmberParticle extends TextureSheetParticle {
     private final float initialAlpha;
 
     private FireAuraEmberParticle(ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed,
-                                  SpriteSet sprites, Band band) {
+                                  SpriteSet sprites, Palette palette, Band band) {
         super(level, x, y, z, xSpeed, ySpeed, zSpeed);
         FireAuraEffectSettings currentSettings = settings;
-        FireAuraEffectSettings.EmberStyle style = band.style(currentSettings);
+        FireAuraEffectSettings.EmberStyle style = palette.style(band, currentSettings);
         this.xd = xSpeed;
         this.yd = ySpeed;
         this.zd = zSpeed;
@@ -34,7 +34,7 @@ public final class FireAuraEmberParticle extends TextureSheetParticle {
         float red = randomBetween(style.minRed(), style.maxRed());
         float green = randomBetween(style.minGreen(), style.maxGreen());
         float blue = randomBetween(style.minBlue(), style.maxBlue());
-        if (this.random.nextFloat() < currentSettings.redAccentChance()) {
+        if (palette == Palette.FIRE && this.random.nextFloat() < currentSettings.redAccentChance()) {
             red = 1.0F;
             green *= 0.35F;
             blue *= 0.15F;
@@ -96,10 +96,10 @@ public final class FireAuraEmberParticle extends TextureSheetParticle {
     }
 
     private void renderQuad(VertexConsumer buffer, Quaternionf rotation, float x, float y, float z, float size, float alpha, int light) {
-        renderVertex(buffer, rotation, x, y, z, -size, -size, this.getU1(), this.getV1(), alpha, light);
-        renderVertex(buffer, rotation, x, y, z, -size, size, this.getU1(), this.getV0(), alpha, light);
-        renderVertex(buffer, rotation, x, y, z, size, size, this.getU0(), this.getV0(), alpha, light);
-        renderVertex(buffer, rotation, x, y, z, size, -size, this.getU0(), this.getV1(), alpha, light);
+        renderVertex(buffer, rotation, x, y, z, size, -size, this.getU1(), this.getV1(), alpha, light);
+        renderVertex(buffer, rotation, x, y, z, size, size, this.getU1(), this.getV0(), alpha, light);
+        renderVertex(buffer, rotation, x, y, z, -size, size, this.getU0(), this.getV0(), alpha, light);
+        renderVertex(buffer, rotation, x, y, z, -size, -size, this.getU0(), this.getV1(), alpha, light);
     }
 
     private void renderVertex(VertexConsumer buffer, Quaternionf rotation, float x, float y, float z,
@@ -111,51 +111,113 @@ public final class FireAuraEmberParticle extends TextureSheetParticle {
                 .setLight(light);
     }
 
-    private abstract static class Provider implements ParticleProvider<SimpleParticleType> {
+    public static final class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprites;
+        private final Palette palette;
         private final Band band;
 
-        private Provider(SpriteSet sprites, Band band) {
+        public Provider(SpriteSet sprites, Palette palette, Band band) {
             this.sprites = sprites;
+            this.palette = palette;
             this.band = band;
         }
 
         @Override
         public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z,
                                        double xSpeed, double ySpeed, double zSpeed) {
-            return new FireAuraEmberParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites, this.band);
+            return new FireAuraEmberParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites, this.palette, this.band);
         }
     }
 
-    public static final class LightProvider extends Provider {
+    public static final class LightProvider implements ParticleProvider<SimpleParticleType> {
+        private final Provider delegate;
+
         public LightProvider(SpriteSet sprites) {
-            super(sprites, Band.LIGHT);
+            this.delegate = new Provider(sprites, Palette.FIRE, Band.LIGHT);
+        }
+
+        @Override
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z,
+                                       double xSpeed, double ySpeed, double zSpeed) {
+            return delegate.createParticle(type, level, x, y, z, xSpeed, ySpeed, zSpeed);
         }
     }
 
-    public static final class MidProvider extends Provider {
+    public static final class MidProvider implements ParticleProvider<SimpleParticleType> {
+        private final Provider delegate;
+
         public MidProvider(SpriteSet sprites) {
-            super(sprites, Band.MID);
+            this.delegate = new Provider(sprites, Palette.FIRE, Band.MID);
+        }
+
+        @Override
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z,
+                                       double xSpeed, double ySpeed, double zSpeed) {
+            return delegate.createParticle(type, level, x, y, z, xSpeed, ySpeed, zSpeed);
         }
     }
 
-    public static final class DarkProvider extends Provider {
+    public static final class DarkProvider implements ParticleProvider<SimpleParticleType> {
+        private final Provider delegate;
+
         public DarkProvider(SpriteSet sprites) {
-            super(sprites, Band.DARK);
+            this.delegate = new Provider(sprites, Palette.FIRE, Band.DARK);
+        }
+
+        @Override
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z,
+                                       double xSpeed, double ySpeed, double zSpeed) {
+            return delegate.createParticle(type, level, x, y, z, xSpeed, ySpeed, zSpeed);
         }
     }
 
-    private enum Band {
+    public enum Band {
         LIGHT,
         MID,
         DARK;
 
-        private FireAuraEffectSettings.EmberStyle style(FireAuraEffectSettings settings) {
+        private FireAuraEffectSettings.EmberStyle fireStyle(FireAuraEffectSettings settings) {
             return switch (this) {
                 case LIGHT -> settings.light();
                 case MID -> settings.mid();
                 case DARK -> settings.dark();
             };
         }
+    }
+
+    public enum Palette {
+        FIRE(null, null, null),
+        SOUL_FIRE(new ColorRange(0.60F, 0.90F, 0.80F, 1.0F, 0.95F, 1.0F), new ColorRange(0.30F, 0.65F, 0.55F, 0.90F, 0.82F, 1.0F), new ColorRange(0.12F, 0.38F, 0.32F, 0.70F, 0.62F, 0.95F)),
+        ICE(new ColorRange(0.88F, 1.0F, 0.94F, 1.0F, 1.0F, 1.0F), new ColorRange(0.55F, 0.82F, 0.75F, 0.95F, 0.92F, 1.0F), new ColorRange(0.22F, 0.54F, 0.50F, 0.82F, 0.72F, 0.96F)),
+        FROST(new ColorRange(0.72F, 0.94F, 0.90F, 1.0F, 1.0F, 1.0F), new ColorRange(0.35F, 0.68F, 0.65F, 0.92F, 0.88F, 1.0F), new ColorRange(0.12F, 0.38F, 0.38F, 0.72F, 0.72F, 0.96F)),
+        LIGHTNING(new ColorRange(1.0F, 1.0F, 0.70F, 0.96F, 0.08F, 0.26F), new ColorRange(0.92F, 1.0F, 0.38F, 0.70F, 0.02F, 0.12F), new ColorRange(0.68F, 0.92F, 0.14F, 0.42F, 0.0F, 0.05F)),
+        PLASMA(new ColorRange(0.82F, 1.0F, 0.34F, 0.62F, 0.85F, 1.0F), new ColorRange(0.54F, 0.86F, 0.10F, 0.30F, 0.64F, 1.0F), new ColorRange(0.28F, 0.58F, 0.03F, 0.14F, 0.38F, 0.82F)),
+        POISON(new ColorRange(0.34F, 0.62F, 0.82F, 1.0F, 0.10F, 0.28F), new ColorRange(0.16F, 0.42F, 0.52F, 0.80F, 0.04F, 0.16F), new ColorRange(0.04F, 0.20F, 0.24F, 0.54F, 0.01F, 0.08F)),
+        TOXIN(new ColorRange(0.74F, 1.0F, 0.22F, 0.50F, 0.78F, 1.0F), new ColorRange(0.46F, 0.78F, 0.06F, 0.24F, 0.54F, 0.92F), new ColorRange(0.22F, 0.48F, 0.02F, 0.12F, 0.28F, 0.68F));
+
+        private final ColorRange light;
+        private final ColorRange mid;
+        private final ColorRange dark;
+
+        Palette(ColorRange light, ColorRange mid, ColorRange dark) {
+            this.light = light;
+            this.mid = mid;
+            this.dark = dark;
+        }
+
+        private FireAuraEffectSettings.EmberStyle style(Band band, FireAuraEffectSettings settings) {
+            FireAuraEffectSettings.EmberStyle shared = band.fireStyle(settings);
+            if (this == FIRE) return shared;
+            ColorRange color = switch (band) {
+                case LIGHT -> light;
+                case MID -> mid;
+                case DARK -> dark;
+            };
+            return new FireAuraEffectSettings.EmberStyle(shared.minScale(), shared.maxScale(), shared.minAlpha(), shared.maxAlpha(),
+                    color.minRed(), color.maxRed(), color.minGreen(), color.maxGreen(), color.minBlue(), color.maxBlue());
+        }
+    }
+
+    private record ColorRange(float minRed, float maxRed, float minGreen, float maxGreen, float minBlue, float maxBlue) {
     }
 }
