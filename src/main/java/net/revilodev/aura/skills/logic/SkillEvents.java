@@ -43,7 +43,6 @@ public final class SkillEvents {
     public static void register() {
         NeoForge.EVENT_BUS.addListener(SkillEvents::onKill);
         NeoForge.EVENT_BUS.addListener(SkillEvents::onLivingDrops);
-        NeoForge.EVENT_BUS.addListener(SkillEvents::onBlockDrops);
         NeoForge.EVENT_BUS.addListener(SkillEvents::onIncomingDamage);
         NeoForge.EVENT_BUS.addListener(SkillEvents::onFinalDamage);
         NeoForge.EVENT_BUS.addListener(SkillEvents::onKnockback);

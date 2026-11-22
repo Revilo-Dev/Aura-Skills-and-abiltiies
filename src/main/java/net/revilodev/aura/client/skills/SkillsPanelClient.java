@@ -8,8 +8,10 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.neoforged.api.distmarker.Dist;
@@ -33,6 +35,7 @@ import net.revilodev.aura.client.AuraClientConfig;
 import net.revilodev.aura.client.BottomPullTabButton;
 import net.revilodev.aura.client.PanelTab;
 import net.revilodev.aura.client.PanelTabButton;
+import net.revilodev.aura.client.PlayerStatsRenderer;
 import net.revilodev.aura.client.SettingsBackTabButton;
 import net.revilodev.aura.client.SkillsToggleButton;
 import net.revilodev.aura.api.PanelStateChangedEvent;
@@ -230,6 +233,13 @@ public final class SkillsPanelClient {
             if (st.settingsView.mouseScrolled(st.bg.getX(), st.bg.getY(), event.getMouseX(), event.getMouseY(), event.getScrollDeltaY())) event.setCanceled(true);
             return;
         }
+        if (st.viewMode == ViewMode.PLAYER) {
+            if (PlayerStatsRenderer.contains(st.bg.getX(), st.bg.getY(), PANEL_W, PANEL_H, event.getMouseX(), event.getMouseY())) {
+                st.playerStatsScroll = Mth.clamp(st.playerStatsScroll - (int) Math.signum(event.getScrollDeltaY()) * 12, 0, st.playerStatsMaxScroll);
+                event.setCanceled(true);
+            }
+            return;
+        }
         if (st.viewMode != ViewMode.MAIN) return;
 
         double mx = event.getMouseX();
@@ -308,6 +318,26 @@ public final class SkillsPanelClient {
             return;
         }
         if (st.viewMode == ViewMode.PLAYER) {
+            if (event.getButton() == 0 && st.playerStatsAbility != null) {
+                AbilityDefinition ability = AbilityRegistry.def(st.playerStatsAbility);
+                if (ability != null) {
+                    setTab(st, PanelTab.ABILITIES);
+                    st.abilityList.setSelected(st.playerStatsAbility);
+                    st.abilityDetails.setAbility(ability);
+                }
+                event.setCanceled(true);
+                return;
+            }
+            if (event.getButton() == 0 && st.playerStatsSkill != null) {
+                SkillDefinition skill = SkillRegistry.def(st.playerStatsSkill);
+                if (skill != null) {
+                    setTab(st, PanelTab.SKILLS);
+                    st.skillsList.setSelected(st.playerStatsSkill);
+                    st.skillsDetails.setSkill(skill);
+                }
+                event.setCanceled(true);
+                return;
+            }
             if (isInsideOverlay(st, mouseX, mouseY)) event.setCanceled(true);
             return;
         }
@@ -409,6 +439,8 @@ public final class SkillsPanelClient {
 
     private static void setViewMode(State st, ViewMode viewMode) {
         st.viewMode = viewMode;
+        if (viewMode == ViewMode.PLAYER) st.playerStatsScroll = 0;
+        st.playerStatsHover = null;
         updateVisibility(st);
     }
 
@@ -649,6 +681,19 @@ public final class SkillsPanelClient {
     }
 
     private static void renderPlayerView(GuiGraphics gg, State st, int mouseX, int mouseY) {
+        PlayerStatsRenderer.Result result = PlayerStatsRenderer.render(gg, st.bg.getX(), st.bg.getY(), PANEL_W, PANEL_H,
+                st.playerStatsScroll, mouseX, mouseY);
+        st.playerStatsMaxScroll = result.maxScroll();
+        st.playerStatsScroll = Mth.clamp(st.playerStatsScroll, 0, result.maxScroll());
+        st.playerStatsAbility = result.hoveredAbility();
+        st.playerStatsSkill = result.hoveredSkill();
+        if (result.hoveredKey() != null && !result.hoveredKey().equals(st.playerStatsHover)) {
+            net.minecraft.client.Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.45F, 1.6F));
+        }
+        st.playerStatsHover = result.hoveredKey();
+    }
+
+    private static void renderLegacyPlayerView(GuiGraphics gg, State st, int mouseX, int mouseY) {
         var mc = net.minecraft.client.Minecraft.getInstance();
         if (mc.player == null) return;
         Component hoveredTooltip = null;
@@ -817,6 +862,11 @@ public final class SkillsPanelClient {
         SettingsBackTabButton backTab;
         ViewMode viewMode = ViewMode.MAIN;
         AuraSettingsView settingsView;
+        int playerStatsScroll;
+        int playerStatsMaxScroll;
+        String playerStatsHover;
+        AbilityId playerStatsAbility;
+        SkillId playerStatsSkill;
 
         State(InventoryScreen inv) {
             this.inv = inv;

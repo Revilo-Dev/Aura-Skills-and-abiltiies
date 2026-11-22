@@ -214,7 +214,8 @@ public final class AbilityListWidget extends AbstractWidget {
             int textX = getX() + VIEWPORT_OFFSET_X + 10 + headerTextOffsetX;
             int textY = getY() + 4;
             drawScaledIcon(gg, ABILITY_ORB_TEX, textX - 10, textY - 1, 8);
-            drawScaledText(gg, Component.translatable("gui.aura.points.ability", abilities.points()).getString(), textX, textY, 0xC78CFF, 0.85F);
+            drawScaledText(gg, "+", textX, textY, 0xFFFFFFFF, 0.85F);
+            drawScaledText(gg, Integer.toString(abilities.points()), textX + (int) (mc.font.width("+") * 0.85F) + 2, textY, 0xC78CFF, 0.85F);
         }
 
         int viewportX = getX() + VIEWPORT_OFFSET_X + viewportExtraOffsetX;
@@ -300,7 +301,7 @@ public final class AbilityListWidget extends AbstractWidget {
             }
             if (hovered) {
                 if (hoveredAbility != def.id()) {
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 1.35F));
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.45F, 1.6F));
                 }
                 hoveredAbility = def.id();
                 int lvl = abilities.rank(def.id().core());
@@ -371,6 +372,10 @@ public final class AbilityListWidget extends AbstractWidget {
                 PacketDistributor.sendToServer(new AbilitiesNetwork.AbilityActionPayload(1, node.def.id().ordinal()));
             }
         } else if (isSpecialization && button == 0) {
+            if (node.def.required() != null && abilities.rank(node.def.required()) <= 0) {
+                unavailableClickShakeUntil = mc.player.tickCount + 8;
+                return true;
+            }
             PacketDistributor.sendToServer(new AbilitiesNetwork.AbilityActionPayload(2, node.def.id().ordinal()));
         }
         return true;

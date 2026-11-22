@@ -46,7 +46,7 @@ public final class AuraSettingsView {
     }
 
     public Component title() {
-        return Component.translatable("gui.aura.book.title");
+        return category.title();
     }
 
     public void render(GuiGraphics graphics, int panelX, int panelY, int mouseX, int mouseY) {

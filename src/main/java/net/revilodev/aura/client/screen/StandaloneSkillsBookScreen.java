@@ -5,8 +5,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -17,6 +19,7 @@ import net.revilodev.aura.client.AuraClientConfig;
 import net.revilodev.aura.client.BottomPullTabButton;
 import net.revilodev.aura.client.PanelTab;
 import net.revilodev.aura.client.PanelTabButton;
+import net.revilodev.aura.client.PlayerStatsRenderer;
 import net.revilodev.aura.client.SettingsBackTabButton;
 import net.revilodev.aura.client.abilities.AbilityKeybinds;
 import net.revilodev.aura.client.abilities.AbilityDetailsPanel;
@@ -75,6 +78,11 @@ public final class StandaloneSkillsBookScreen extends Screen {
     private BottomPullTabButton settingsBottomTab;
     private SettingsBackTabButton backTab;
     private ViewMode viewMode = ViewMode.MAIN;
+    private int playerStatsScroll;
+    private int playerStatsMaxScroll;
+    private String playerStatsHover;
+    private AbilityId playerStatsAbility;
+    private SkillId playerStatsSkill;
 
     private final AuraSettingsView settingsView = new AuraSettingsView(new AuraBookSettingsModel());
 
@@ -185,6 +193,10 @@ public final class StandaloneSkillsBookScreen extends Screen {
         if (viewMode == ViewMode.SETTINGS) {
             if (settingsView.mouseScrolled(panelX, panelY, mouseX, mouseY, scrollY)) return true;
         }
+        if (viewMode == ViewMode.PLAYER && PlayerStatsRenderer.contains(panelX, panelY, panelWidth, panelHeight, mouseX, mouseY)) {
+            playerStatsScroll = Math.max(0, Math.min(playerStatsMaxScroll, playerStatsScroll - (int) Math.signum(scrollY) * 12));
+            return true;
+        }
         if (viewMode == ViewMode.MAIN) {
             if (activeTab == PanelTab.SKILLS && skillsDetails != null && skillsDetails.mouseScrolled(mouseX, mouseY, scrollX, scrollY)) {
                 return true;
@@ -207,6 +219,24 @@ public final class StandaloneSkillsBookScreen extends Screen {
 
         if (viewMode == ViewMode.SETTINGS || viewMode == ViewMode.PLAYER) {
             if (viewMode == ViewMode.SETTINGS && settingsView.mouseClicked(panelX, panelY, mouseX, mouseY, button)) return true;
+            if (viewMode == ViewMode.PLAYER && button == 0 && playerStatsAbility != null) {
+                AbilityDefinition ability = AbilityRegistry.def(playerStatsAbility);
+                if (ability != null) {
+                    setTab(PanelTab.ABILITIES);
+                    abilityList.setSelected(playerStatsAbility);
+                    abilityDetails.setAbility(ability);
+                }
+                return true;
+            }
+            if (viewMode == ViewMode.PLAYER && button == 0 && playerStatsSkill != null) {
+                SkillDefinition skill = SkillRegistry.def(playerStatsSkill);
+                if (skill != null) {
+                    setTab(PanelTab.SKILLS);
+                    skillsList.setSelected(playerStatsSkill);
+                    skillsDetails.setSkill(skill);
+                }
+                return true;
+            }
             if (isInsidePanelOrTabs(mouseX, mouseY)) return super.mouseClicked(mouseX, mouseY, button);
             return false;
         }
@@ -326,6 +356,8 @@ public final class StandaloneSkillsBookScreen extends Screen {
 
     private void setViewMode(ViewMode mode) {
         viewMode = mode;
+        if (mode == ViewMode.PLAYER) playerStatsScroll = 0;
+        playerStatsHover = null;
         playerBottomTab.setSelected(mode == ViewMode.PLAYER);
         settingsBottomTab.setSelected(mode == ViewMode.SETTINGS);
 
@@ -421,6 +453,19 @@ public final class StandaloneSkillsBookScreen extends Screen {
     }
 
     private void renderPlayerView(GuiGraphics gg, int mouseX, int mouseY) {
+        PlayerStatsRenderer.Result result = PlayerStatsRenderer.render(gg, panelX, panelY, panelWidth, panelHeight,
+                playerStatsScroll, mouseX, mouseY);
+        playerStatsMaxScroll = result.maxScroll();
+        playerStatsScroll = Math.max(0, Math.min(playerStatsScroll, result.maxScroll()));
+        playerStatsAbility = result.hoveredAbility();
+        playerStatsSkill = result.hoveredSkill();
+        if (result.hoveredKey() != null && !result.hoveredKey().equals(playerStatsHover)) {
+            minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.45F, 1.6F));
+        }
+        playerStatsHover = result.hoveredKey();
+    }
+
+    private void renderLegacyPlayerView(GuiGraphics gg, int mouseX, int mouseY) {
         if (minecraft == null || minecraft.player == null) return;
         Component hoveredTooltip = null;
 

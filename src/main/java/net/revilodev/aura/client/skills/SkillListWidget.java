@@ -147,7 +147,8 @@ public final class SkillListWidget extends AbstractWidget {
             int textX = getX() + 10;
             int textY = getY() + 4;
             drawScaledIcon(gg, SKILL_ORB_TEX, textX - 10, textY - 1, 8);
-            drawScaledText(gg, Component.translatable("gui.aura.points.skill_short", ps.points()).getString(), textX, textY, 0x6AB2FF, POINTS_TEXT_SCALE);
+            drawScaledText(gg, "+", textX, textY, 0xFFFFFFFF, POINTS_TEXT_SCALE);
+            drawScaledText(gg, Integer.toString(ps.points()), textX + (int) (mc.font.width("+") * POINTS_TEXT_SCALE) + 2, textY, 0x6AB2FF, POINTS_TEXT_SCALE);
         }
 
         int top = getY() + HEADER_HEIGHT;
@@ -207,7 +208,7 @@ public final class SkillListWidget extends AbstractWidget {
             if (hovered) {
                 currentHoveredSkill = def.id();
                 if (hoveredSkill != def.id()) {
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 1.35F));
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.45F, 1.6F));
                 }
                 Component name = Component.literal(def.title()).withStyle(def.primary() ? ChatFormatting.GOLD : ChatFormatting.WHITE);
                 hoveredTooltip = List.of(
