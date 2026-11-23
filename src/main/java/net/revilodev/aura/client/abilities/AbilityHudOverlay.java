@@ -38,6 +38,8 @@ public final class AbilityHudOverlay {
             ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "textures/gui/hud/abilitybar.png");
     private static final ResourceLocation ABILITY_BAR_SELECTOR_TEX =
             ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "textures/gui/hud/abilitybar-selector.png");
+    private static final ResourceLocation JUMP_ICON_TEX =
+            ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "textures/gui/hud/jump-icon.png");
     private static final int GRID_COLUMNS = 4;
     private static final int GRID_ROWS = 2;
     private static final long FAIL_FLASH_MS = 350L;
@@ -65,6 +67,7 @@ public final class AbilityHudOverlay {
         List<AbilityId> displayed = showGrid
                 ? AbilityKeybinds.altDisplayAbilities()
                 : activeSelectionAbilities(abilities);
+        drawLeapCharges(gg, abilities.activeTicks(AbilityId.WIND_LEAP));
         if (displayed.isEmpty()) return;
 
         int columns = showGrid ? Math.min(GRID_COLUMNS, displayed.size()) : displayed.size();
@@ -91,6 +94,15 @@ public final class AbilityHudOverlay {
                     gg.blit(ABILITY_BAR_SELECTOR_TEX, slotX - 2, slotY - 2, 0, 0, SELECTOR_WIDTH, SELECTOR_HEIGHT, SELECTOR_WIDTH, SELECTOR_HEIGHT);
                 }
             }
+        }
+    }
+
+    private static void drawLeapCharges(GuiGraphics gg, int charges) {
+        int count = Math.min(2, Math.max(0, charges));
+        int x = gg.guiWidth() / 2 - 3;
+        int y = gg.guiHeight() / 2 + 10;
+        for (int charge = 0; charge < count; charge++) {
+            gg.blit(JUMP_ICON_TEX, x, y + charge * 5, 0, 0, 6, 5, 6, 5);
         }
     }
 

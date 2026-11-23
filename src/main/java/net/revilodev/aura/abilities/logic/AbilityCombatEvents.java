@@ -10,6 +10,8 @@ import net.revilodev.aura.abilities.AbilitiesAttachments;
 import net.revilodev.aura.abilities.AbilityElement;
 import net.revilodev.aura.abilities.AbilityId;
 import net.revilodev.aura.abilities.PlayerAbilities;
+import net.revilodev.aura.skills.PlayerSkills;
+import net.revilodev.aura.skills.SkillsAttachments;
 import net.revilodev.aura.effect.CodexMobEffects;
 
 import java.util.HashMap;
@@ -39,8 +41,15 @@ public final class AbilityCombatEvents {
         }
         int charges = abilities.activeTicks(AbilityId.FORCE_AEGIS);
         if (charges > 0) {
-            abilities.setActiveTicks(AbilityId.FORCE_AEGIS, charges - 1);
-            event.setAmount(0.0F);
+            int coreRank = AbilityLogic.effectiveCoreRank(target, abilities, AbilityId.FORCE_AEGIS);
+            int remainingCharges = charges - 1;
+            abilities.setActiveTicks(AbilityId.FORCE_AEGIS, remainingCharges);
+            event.setAmount((float) (event.getAmount() * (1.0D - AbilityScaling.aegisDamageReduction(coreRank))));
+            if (remainingCharges <= 0 && !target.isCreative()) {
+                PlayerSkills skills = target.getData(SkillsAttachments.PLAYER_SKILLS.get());
+                abilities.setCooldown(AbilityId.FORCE_AEGIS, AbilityScaling.cooldownTicks(AbilityId.FORCE_AEGIS, coreRank, skills, target));
+            }
+            AbilitySyncEvents.markDirty(target);
 
             if (event.getSource().getEntity() instanceof LivingEntity attacker) {
                 Vec3 away = attacker.position().subtract(target.position());
@@ -54,7 +63,7 @@ public final class AbilityCombatEvents {
             }
 
             if (target.level() instanceof ServerLevel level) {
-                level.sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING, target.getX(), target.getY() + 1.0D, target.getZ(), 12, 0.35D, 0.3D, 0.35D, 0.01D);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING, target.getX(), target.getY() + 1.0D, target.getZ(), 24, 0.35D, 0.3D, 0.35D, 0.01D);
             }
             return;
         }

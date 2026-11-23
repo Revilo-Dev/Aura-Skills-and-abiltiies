@@ -44,6 +44,8 @@ public final class ModParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> TOXIN_AURA_EMBER_DARK = REGISTER.register("toxin_aura_ember_dark", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SOUL_FIRE_EMBER = REGISTER.register("soul_fire_ember", () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> ICICLE = REGISTER.register("icicle", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> AEGIS = REGISTER.register("aegis", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> AEGIS_MAX = REGISTER.register("aegis_max", () -> new SimpleParticleType(false));
 
     private ModParticles() {}
 

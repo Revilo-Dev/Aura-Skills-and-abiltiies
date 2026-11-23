@@ -15,6 +15,12 @@ public final class AbilityScaling {
     private AbilityScaling() {}
 
     public static int cooldownTicks(AbilityId id, int rank, PlayerSkills skills) {
+        if (id == AbilityId.WIND_LEAP) {
+            return leapCooldownTicks(rank);
+        }
+        if (id == AbilityId.FORCE_AEGIS) {
+            return aegisCooldownTicks(rank);
+        }
         if (id.specialization() == net.revilodev.aura.abilities.AbilitySpecialization.NOVA) {
             boolean finalForm = AbilityConfig.ultimateAbilitiesEnabled() && rank >= id.core().maxRank();
             double auraCooldown = 880.0D - Math.max(0, rank - 1) * 40.0D - (finalForm ? 80.0D : 0.0D);
@@ -64,6 +70,22 @@ public final class AbilityScaling {
 
     public static int auraDurationTicks(int coreRank, boolean finalForm) {
         return 80 + Math.max(0, coreRank - 1) * 10 + (finalForm ? 80 : 0);
+    }
+
+    public static int aegisCharges(int coreRank) {
+        return Math.max(1, coreRank);
+    }
+
+    public static double aegisDamageReduction(int coreRank) {
+        return Math.min(0.90D, aegisCharges(coreRank) * 0.10D);
+    }
+
+    public static int aegisCooldownTicks(int coreRank) {
+        return (40 + aegisCharges(coreRank) * 10) * 20;
+    }
+
+    public static int leapCooldownTicks(int coreRank) {
+        return Math.max(200, 400 - Math.max(0, coreRank - 1) * 40);
     }
 
     public static double auraRadius(int coreRank, boolean finalForm) {

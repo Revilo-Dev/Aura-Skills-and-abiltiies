@@ -13,7 +13,10 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.revilodev.aura.client.abilities.AbilityHudOverlay;
 import net.revilodev.aura.client.abilities.AbilityKeybinds;
 import net.revilodev.aura.client.abilities.BurstCubeProjectileRenderer;
+import net.revilodev.aura.client.abilities.SmallLightningStrikeRenderer;
 import net.revilodev.aura.client.particle.IcicleParticle;
+import net.revilodev.aura.client.particle.AegisOrbParticle;
+import net.revilodev.aura.client.particle.AnimatedSparkParticle;
 import net.revilodev.aura.client.particle.FireAuraEmberParticle;
 import net.revilodev.aura.CodexMod;
 import net.revilodev.aura.client.skills.SkillsPanelClient;
@@ -40,6 +43,7 @@ public final class CodexClientMod {
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         // custom projectile renderer
         event.registerEntityRenderer(ModEntities.BURST_CUBE.get(), BurstCubeProjectileRenderer::new);
+        event.registerEntityRenderer(ModEntities.SMALL_LIGHTNING_STRIKE.get(), SmallLightningStrikeRenderer::new);
     }
 
     private static void onRegisterParticles(RegisterParticleProvidersEvent event) {
@@ -47,10 +51,10 @@ public final class CodexClientMod {
         event.registerSpriteSet(ModParticles.SOULFIRE.get(), FlameParticle.Provider::new);
         event.registerSpriteSet(ModParticles.POISON.get(), FlameParticle.Provider::new);
         event.registerSpriteSet(ModParticles.TOXIN.get(), FlameParticle.Provider::new);
-        event.registerSpriteSet(ModParticles.LIGHTNING_STRIKE.get(), FlameParticle.Provider::new);
-        event.registerSpriteSet(ModParticles.PLASMA_STRIKE.get(), FlameParticle.Provider::new);
-        event.registerSpriteSet(ModParticles.PLASMA_BLAST.get(), FlameParticle.Provider::new);
-        event.registerSpriteSet(ModParticles.FIRE_EMBER.get(), SnowflakeParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.LIGHTNING_STRIKE.get(), AnimatedSparkParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.PLASMA_STRIKE.get(), AnimatedSparkParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.PLASMA_BLAST.get(), AnimatedSparkParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.FIRE_EMBER.get(), AnimatedSparkParticle.Provider::new);
         event.registerSpriteSet(ModParticles.FIRE_AURA_EMBER_LIGHT.get(), FireAuraEmberParticle.LightProvider::new);
         event.registerSpriteSet(ModParticles.FIRE_AURA_EMBER_MID.get(), FireAuraEmberParticle.MidProvider::new);
         event.registerSpriteSet(ModParticles.FIRE_AURA_EMBER_DARK.get(), FireAuraEmberParticle.DarkProvider::new);
@@ -61,8 +65,10 @@ public final class CodexClientMod {
         registerAuraEmberPalette(event, ModParticles.PLASMA_AURA_EMBER_LIGHT.get(), ModParticles.PLASMA_AURA_EMBER_MID.get(), ModParticles.PLASMA_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.PLASMA);
         registerAuraEmberPalette(event, ModParticles.POISON_AURA_EMBER_LIGHT.get(), ModParticles.POISON_AURA_EMBER_MID.get(), ModParticles.POISON_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.POISON);
         registerAuraEmberPalette(event, ModParticles.TOXIN_AURA_EMBER_LIGHT.get(), ModParticles.TOXIN_AURA_EMBER_MID.get(), ModParticles.TOXIN_AURA_EMBER_DARK.get(), FireAuraEmberParticle.Palette.TOXIN);
-        event.registerSpriteSet(ModParticles.SOUL_FIRE_EMBER.get(), SnowflakeParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.SOUL_FIRE_EMBER.get(), AnimatedSparkParticle.Provider::new);
         event.registerSpriteSet(ModParticles.ICICLE.get(), IcicleParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.AEGIS.get(), AegisOrbParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.AEGIS_MAX.get(), AegisOrbParticle.Provider::new);
     }
 
     private static void registerAuraEmberPalette(RegisterParticleProvidersEvent event,

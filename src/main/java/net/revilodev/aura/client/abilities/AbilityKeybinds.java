@@ -128,6 +128,9 @@ public final class AbilityKeybinds {
 
         PlayerAbilities data = mc.player.getData(AbilitiesAttachments.PLAYER_ABILITIES.get());
         data.tickCooldowns();
+        if (!mc.player.onGround() && data.activeTicks(AbilityId.WIND_LEAP) > 0 && mc.options.keyJump.consumeClick()) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(new AbilitiesNetwork.LeapBurstPayload());
+        }
         List<AbilityId> grid = altGrid(data);
         if (!grid.isEmpty()) {
             altSelectionIndex = Mth.clamp(altSelectionIndex, 0, grid.size() - 1);

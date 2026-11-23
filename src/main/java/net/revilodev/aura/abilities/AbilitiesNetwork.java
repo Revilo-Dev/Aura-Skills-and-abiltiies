@@ -36,6 +36,7 @@ public final class AbilitiesNetwork {
         registrar.playToClient(FireAuraEffectSyncPayload.TYPE, FireAuraEffectSyncPayload.STREAM_CODEC, AbilitiesNetwork::handleFireAuraEffectSync);
         registrar.playToServer(AbilityActionPayload.TYPE, AbilityActionPayload.STREAM_CODEC, AbilitiesNetwork::handleAction);
         registrar.playToServer(AbilityUsePayload.TYPE, AbilityUsePayload.STREAM_CODEC, AbilitiesNetwork::handleUse);
+        registrar.playToServer(LeapBurstPayload.TYPE, LeapBurstPayload.STREAM_CODEC, AbilitiesNetwork::handleLeapBurst);
     }
 
     public static void syncTo(ServerPlayer player) {
@@ -107,6 +108,14 @@ public final class AbilitiesNetwork {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
             AbilityId id = AbilityId.byOrdinal(payload.abilityOrdinal());
             if (AbilityLogic.tryActivate(player, id)) {
+                AbilitySyncEvents.markDirty(player);
+            }
+        });
+    }
+
+    private static void handleLeapBurst(LeapBurstPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (ctx.player() instanceof ServerPlayer player && AbilityLogic.tryLeapBurst(player)) {
                 AbilitySyncEvents.markDirty(player);
             }
         });
@@ -215,6 +224,18 @@ public final class AbilitiesNetwork {
 
         public static final StreamCodec<RegistryFriendlyByteBuf, AbilityUsePayload> STREAM_CODEC =
                 StreamCodec.of((buf, msg) -> buf.writeVarInt(msg.abilityOrdinal), buf -> new AbilityUsePayload(buf.readVarInt()));
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record LeapBurstPayload() implements CustomPacketPayload {
+        public static final Type<LeapBurstPayload> TYPE =
+                new Type<>(ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "leap_burst"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, LeapBurstPayload> STREAM_CODEC =
+                StreamCodec.of((buf, msg) -> {}, buf -> new LeapBurstPayload());
 
         @Override
         public Type<? extends CustomPacketPayload> type() {

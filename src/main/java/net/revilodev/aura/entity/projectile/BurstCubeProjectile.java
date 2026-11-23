@@ -54,14 +54,14 @@ public final class BurstCubeProjectile extends ThrowableProjectile {
         }
         if (level() instanceof ServerLevel level) {
             var particle = switch (element()) {
-                case ICE -> net.minecraft.core.particles.ParticleTypes.SNOWFLAKE;
-                case POISON -> finalForm() ? ModParticles.TOXIN.get() : ModParticles.POISON.get();
-                case LIGHTNING -> finalForm() ? ModParticles.PLASMA_BLAST.get() : ModParticles.LIGHTNING_STRIKE.get();
-                case FIRE -> finalForm() ? ModParticles.SOUL_FIRE_EMBER.get() : ModParticles.FIRE_EMBER.get();
-                case BLOOD -> net.minecraft.core.particles.ParticleTypes.DAMAGE_INDICATOR;
+                case ICE -> finalForm() ? ModParticles.FROST_AURA_EMBER_LIGHT.get() : ModParticles.ICE_AURA_EMBER_LIGHT.get();
+                case POISON -> finalForm() ? ModParticles.TOXIN_AURA_EMBER_LIGHT.get() : ModParticles.POISON_AURA_EMBER_LIGHT.get();
+                case LIGHTNING -> finalForm() ? ModParticles.PLASMA_AURA_EMBER_LIGHT.get() : ModParticles.LIGHTNING_AURA_EMBER_LIGHT.get();
+                case FIRE -> finalForm() ? ModParticles.SOUL_FIRE_AURA_EMBER_LIGHT.get() : ModParticles.FIRE_AURA_EMBER_LIGHT.get();
+                case BLOOD -> ModParticles.FIRE_AURA_EMBER_DARK.get();
                 default -> net.minecraft.core.particles.ParticleTypes.END_ROD;
             };
-            level.sendParticles(particle, getX(), getY(), getZ(), 2, 0.03D, 0.03D, 0.03D, 0.001D);
+            level.sendParticles(particle, getX(), getY(), getZ(), 1, 0.025D, 0.025D, 0.025D, 0.002D);
         }
     }
 

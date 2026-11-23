@@ -666,7 +666,7 @@ public final class SkillsPanelClient {
         int x = centerX - width / 2;
         for (int offsetX = -1; offsetX <= 1; offsetX++) {
             for (int offsetY = -1; offsetY <= 1; offsetY++) {
-                if (offsetX != 0 || offsetY != 0) drawScaledText(gg, mc, level, x + offsetX, y + offsetY, 0xFF5A4200, scale, true);
+                if (offsetX != 0 || offsetY != 0) drawScaledText(gg, mc, level, x + offsetX, y + offsetY, 0xFF122C5A, scale, true);
             }
         }
         drawScaledText(gg, mc, level, x, y, 0xFFFFD45E, scale, true);
@@ -688,7 +688,7 @@ public final class SkillsPanelClient {
         st.playerStatsAbility = result.hoveredAbility();
         st.playerStatsSkill = result.hoveredSkill();
         if (result.hoveredKey() != null && !result.hoveredKey().equals(st.playerStatsHover)) {
-            net.minecraft.client.Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.45F, 1.6F));
+            net.minecraft.client.Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.002F, 1.90F));
         }
         st.playerStatsHover = result.hoveredKey();
     }

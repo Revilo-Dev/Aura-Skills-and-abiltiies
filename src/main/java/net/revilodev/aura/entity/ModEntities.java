@@ -8,6 +8,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.revilodev.aura.CodexMod;
 import net.revilodev.aura.entity.projectile.BurstCubeProjectile;
+import net.revilodev.aura.entity.effect.SmallLightningStrikeEntity;
 
 // mod entities
 public final class ModEntities {
@@ -22,6 +23,15 @@ public final class ModEntities {
                     .clientTrackingRange(8)
                     .updateInterval(1)
                     .build("burst_cube")
+    );
+
+    public static final DeferredHolder<EntityType<?>, EntityType<SmallLightningStrikeEntity>> SMALL_LIGHTNING_STRIKE = REGISTER.register(
+            "small_lightning_strike",
+            () -> EntityType.Builder.<SmallLightningStrikeEntity>of(SmallLightningStrikeEntity::new, MobCategory.MISC)
+                    .sized(0.1F, 1.8F)
+                    .clientTrackingRange(32)
+                    .updateInterval(1)
+                    .build("small_lightning_strike")
     );
 
     public static void register(IEventBus modBus) {

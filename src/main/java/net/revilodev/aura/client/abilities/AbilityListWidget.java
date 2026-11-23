@@ -83,6 +83,7 @@ public final class AbilityListWidget extends AbstractWidget {
     private final List<Node> nodes = new ArrayList<>();
     private AbilityId selected;
     private AbilityId hoveredAbility;
+    private AbilityId rejectedAbility;
     private int unavailableClickShakeUntil;
     private boolean headerVisible = true;
     private boolean showLocked = true;
@@ -279,8 +280,7 @@ public final class AbilityListWidget extends AbstractWidget {
             if (maxed && !primary) {
                 tex = (selected == def.id() || hovered) ? WIDGET_PRIMARY_HOVER_TEX : WIDGET_PRIMARY_TEX;
             }
-            boolean unavailable = tex.equals(WIDGET_DISABLED_TEX) || tex.equals(WIDGET_DISABLED_HOVER_TEX) || tex.equals(WIDGET_PRIMARY_DISABLED_TEX);
-            int shakeX = hovered && unavailable && mc.player.tickCount < unavailableClickShakeUntil
+            int shakeX = hovered && def.id() == rejectedAbility && mc.player.tickCount < unavailableClickShakeUntil
                     ? (int) Math.round(Math.sin(mc.player.tickCount * 1.8D)) : 0;
             float hoverScale = hovered ? 1.05F : 1.0F;
             gg.pose().pushPose();
@@ -301,7 +301,7 @@ public final class AbilityListWidget extends AbstractWidget {
             }
             if (hovered) {
                 if (hoveredAbility != def.id()) {
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.45F, 1.6F));
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.002F, 1.90F));
                 }
                 hoveredAbility = def.id();
                 int lvl = abilities.rank(def.id().core());
@@ -355,30 +355,50 @@ public final class AbilityListWidget extends AbstractWidget {
         selected = node.def.id();
         if (onClick != null) onClick.accept(node.def);
         if (!AuraClientConfig.abilityEnabled(node.def.id()) || AbilityConfig.affinityLocked(abilities, node.def.id())) {
-            unavailableClickShakeUntil = mc.player.tickCount + 8;
+            reject(node.def.id());
             return true;
         }
         boolean isCore = node.def.type() == net.revilodev.aura.abilities.AbilityNodeType.CORE;
         boolean isSpecialization = node.def.type() == net.revilodev.aura.abilities.AbilityNodeType.SPECIALIZATION;
         if (editLocked) {
-            unavailableClickShakeUntil = mc.player.tickCount + 8;
+            reject(node.def.id());
             return true;
         }
         if (isCore) {
-            if (button == 0 && !abilities.canUpgrade(node.def.id(), mc.player.isCreative())) unavailableClickShakeUntil = mc.player.tickCount + 8;
+            if (button == 0 && !abilities.canUpgrade(node.def.id(), mc.player.isCreative())) {
+                reject(node.def.id());
+                return true;
+            }
+            if (button == 1 && !abilities.canDowngrade(node.def.id())) {
+                reject(node.def.id());
+                return true;
+            }
             if (button == 0) {
                 PacketDistributor.sendToServer(new AbilitiesNetwork.AbilityActionPayload(0, node.def.id().ordinal()));
             } else if (button == 1) {
                 PacketDistributor.sendToServer(new AbilitiesNetwork.AbilityActionPayload(1, node.def.id().ordinal()));
             }
         } else if (isSpecialization && button == 0) {
-            if (node.def.required() != null && abilities.rank(node.def.required()) <= 0) {
-                unavailableClickShakeUntil = mc.player.tickCount + 8;
+            AbilityId current = abilities.selectedSpecialization(node.def.id().element());
+            boolean cooldownActive = !mc.player.isCreative()
+                    && ((AbilityConfig.switchCooldownsEnabled() && abilities.switchCooldownTicks(node.def.id().core()) > 0)
+                    || abilities.cooldownTicks(node.def.id()) > 0
+                    || (current != null && abilities.cooldownTicks(current) > 0));
+            if (AuraClientConfig.blockAbilitySwitching() || abilities.rank(node.def.id().core()) <= 0 || cooldownActive) {
+                reject(node.def.id());
                 return true;
             }
-            PacketDistributor.sendToServer(new AbilitiesNetwork.AbilityActionPayload(2, node.def.id().ordinal()));
+            if (current != node.def.id()) {
+                PacketDistributor.sendToServer(new AbilitiesNetwork.AbilityActionPayload(2, node.def.id().ordinal()));
+            }
         }
         return true;
+    }
+
+    private void reject(AbilityId id) {
+        rejectedAbility = id;
+        unavailableClickShakeUntil = mc.player.tickCount + 8;
+        mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.002F, 1.15F));
     }
 
     @Override
@@ -481,13 +501,13 @@ public final class AbilityListWidget extends AbstractWidget {
 
         if (id == AbilityId.WIND_DASH) {
             durationText = null;
-            thirdText = "Distance " + fmt(1.0D + (level * 0.2D));
+            thirdText = "Forward boost " + fmt(1.0D + (level * 0.2D));
         } else if (id == AbilityId.WIND_LEAP) {
             durationText = null;
-            thirdText = "Height " + fmt(0.55D + (level * 0.05D));
+            thirdText = level >= id.core().maxRank() ? "Extra jumps 2" : "Extra jumps 1";
         } else if (id == AbilityId.WIND_LUNGE) {
             durationText = "Distance " + fmt(AbilityScaling.radius(id, level, 1.0D) + 4.0D);
-            thirdText = "Damage " + fmt(AbilityScaling.damage(id, level, 1.0D) * 1.25D);
+            thirdText = "Landing shockwave " + fmt(AbilityScaling.damage(id, level, 1.0D) * 0.7D);
         } else if (id == AbilityId.BLOOD_HEAL) {
             durationText = null;
             thirdText = "Health " + fmt(AbilityScaling.damage(id, level, 1.0D) * 0.6D);
@@ -505,7 +525,9 @@ public final class AbilityListWidget extends AbstractWidget {
             int strengthAmp = Math.min(4, coreRank / 2);
             thirdText = "Damage +" + fmt(3.0D * (strengthAmp + 1));
         } else if (id == AbilityId.FORCE_AEGIS) {
-            thirdText = "Dmg Avoids " + Math.max(1, (int) Math.round(level));
+            durationText = "Charges " + AbilityScaling.aegisCharges(level);
+            thirdText = "Reduction " + fmt(AbilityScaling.aegisDamageReduction(level) * 100.0D) + "% | Cooldown "
+                    + formatSeconds(AbilityScaling.aegisCooldownTicks(level));
         } else if (id == AbilityId.FORCE_SHOCKWAVE) {
             durationText = "Waves " + Math.max(1, level) + " | Duration " + formatSeconds(AbilityScaling.shockwaveDurationTicks(level, finalForm));
             thirdText = "Width " + fmt(AbilityScaling.radius(id, level, 1.0D)) + " | Distance " + fmt(AbilityScaling.shockwaveDistance(level, 1.0D, finalForm));

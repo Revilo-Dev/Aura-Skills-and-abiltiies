@@ -202,7 +202,7 @@ public final class AbilityConfig {
             case BLOOD_BURST -> 3;
             case FORCE_SHOCKWAVE -> 3;
             case FIRE_STORM, ICE_STORM, LIGHTNING_STORM -> 5;
-            case FORCE_RAMPAGE -> 5;
+            case FORCE_RAMPAGE -> 3;
             case BLOOD_DRAIN -> 4;
             default -> 1;
         };
@@ -257,7 +257,7 @@ public final class AbilityConfig {
             case FORCE_SHOCKWAVE -> 3;
             case ICE, LIGHTNING -> 4;
             case FIRE_STORM, ICE_STORM, LIGHTNING_STORM -> 5;
-            case FORCE_RAMPAGE -> 5;
+            case FORCE_RAMPAGE -> 3;
             case BLOOD_DRAIN -> 4;
             default -> id.isSpecialization() ? 1 : 0;
         };

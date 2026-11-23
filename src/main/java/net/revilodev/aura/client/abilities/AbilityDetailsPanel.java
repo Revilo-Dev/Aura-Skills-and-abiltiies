@@ -275,13 +275,13 @@ public final class AbilityDetailsPanel extends AbstractWidget {
 
         if (id == AbilityId.WIND_DASH) {
             durationText = null;
-            thirdText = "Distance " + fmt(1.0D + (level * 0.2D));
+            thirdText = "Forward boost " + fmt(1.0D + (level * 0.2D));
         } else if (id == AbilityId.WIND_LEAP) {
             durationText = null;
-            thirdText = "Height " + fmt(0.55D + (level * 0.05D));
+            thirdText = level >= id.core().maxRank() ? "Extra jumps 2" : "Extra jumps 1";
         } else if (id == AbilityId.WIND_LUNGE) {
             durationText = "Distance " + fmt(AbilityScaling.radius(id, level, 1.0D) + 4.0D);
-            thirdText = "Damage " + fmt(AbilityScaling.damage(id, level, 1.0D) * 1.25D);
+            thirdText = "Landing shockwave " + fmt(AbilityScaling.damage(id, level, 1.0D) * 0.7D);
         } else if (id == AbilityId.BLOOD_HEAL) {
             durationText = null;
             thirdText = "Health " + fmt(AbilityScaling.damage(id, level, 1.0D) * 0.6D);
@@ -299,7 +299,9 @@ public final class AbilityDetailsPanel extends AbstractWidget {
             int strengthAmp = Math.min(4, coreRank / 2);
             thirdText = "Damage +" + fmt(3.0D * (strengthAmp + 1));
         } else if (id == AbilityId.FORCE_AEGIS) {
-            thirdText = "Dmg Avoids " + Math.max(1, (int) Math.round(level));
+            durationText = "Charges " + AbilityScaling.aegisCharges(level);
+            thirdText = "Reduction " + fmt(AbilityScaling.aegisDamageReduction(level) * 100.0D) + "% | Cooldown "
+                    + formatSeconds(AbilityScaling.aegisCooldownTicks(level));
         } else if (id == AbilityId.FORCE_SHOCKWAVE) {
             durationText = "Waves " + Math.max(1, level) + " | Duration " + formatSeconds(AbilityScaling.shockwaveDurationTicks(level, finalForm));
             thirdText = "Width " + fmt(AbilityScaling.radius(id, level, 1.0D)) + " | Distance " + fmt(AbilityScaling.shockwaveDistance(level, 1.0D, finalForm));

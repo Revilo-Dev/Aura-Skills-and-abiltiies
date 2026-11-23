@@ -438,7 +438,7 @@ public final class StandaloneSkillsBookScreen extends Screen {
         int x = centerX - width / 2;
         for (int offsetX = -1; offsetX <= 1; offsetX++) {
             for (int offsetY = -1; offsetY <= 1; offsetY++) {
-                if (offsetX != 0 || offsetY != 0) drawScaledText(gg, level, x + offsetX, y + offsetY, 0xFF5A4200, scale, true);
+                if (offsetX != 0 || offsetY != 0) drawScaledText(gg, level, x + offsetX, y + offsetY, 0xFF122C5A, scale, true);
             }
         }
         drawScaledText(gg, level, x, y, 0xFFFFD45E, scale, true);
@@ -460,7 +460,7 @@ public final class StandaloneSkillsBookScreen extends Screen {
         playerStatsAbility = result.hoveredAbility();
         playerStatsSkill = result.hoveredSkill();
         if (result.hoveredKey() != null && !result.hoveredKey().equals(playerStatsHover)) {
-            minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.45F, 1.6F));
+            minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.002F, 1.90F));
         }
         playerStatsHover = result.hoveredKey();
     }

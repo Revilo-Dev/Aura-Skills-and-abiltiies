@@ -23,6 +23,7 @@ import net.revilodev.aura.attributes.CodexAttributes;
 import net.revilodev.aura.client.abilities.AbilityKeybinds;
 import net.revilodev.aura.skills.PlayerSkills;
 import net.revilodev.aura.skills.SkillBalance;
+import net.revilodev.aura.skills.SkillCategory;
 import net.revilodev.aura.skills.SkillId;
 import net.revilodev.aura.skills.SkillsAttachments;
 
@@ -33,10 +34,9 @@ import java.util.Locale;
 @SuppressWarnings("resource")
 public final class PlayerStatsRenderer {
     private static final ResourceKey<Enchantment> ABILITY_POWER_ENCHANT = enchantmentKey("ability_power");
-    private static final ResourceKey<Enchantment> LOOTING_ENCHANT = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.withDefaultNamespace("looting"));
-    private static final ResourceKey<Enchantment> FORTUNE_ENCHANT = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.withDefaultNamespace("fortune"));
-    private static final int CONTENT_TOP = 42;
+    private static final int CONTENT_TOP = 38;
     private static final int CONTENT_BOTTOM = 6;
+    private static final int SCROLL_AREA_OFFSET_Y = -4;
     private static final int ROW_HEIGHT = 10;
     private static final int CATEGORY_HEIGHT = 13;
 
@@ -50,9 +50,9 @@ public final class PlayerStatsRenderer {
 
         Player player = minecraft.player;
         int level = LevelUpApi.levelForTotalXp(LevelUpApi.getXp(player));
-        drawOutlinedLevel(graphics, minecraft, Integer.toString(level), panelX + panelWidth / 2, panelY + 16);
+        drawOutlinedLevel(graphics, minecraft, Integer.toString(level), panelX + panelWidth / 2, panelY + 10);
         int xpX = panelX + 19;
-        int xpY = panelY + 34;
+        int xpY = panelY + 28;
         int xpWidth = panelWidth - 38;
         long xpCurrent = LevelUpApi.getXpIntoCurrentLevel(player);
         long xpMaximum = Math.max(1L, LevelUpApi.getXpNeededForNextLevel(player));
@@ -63,9 +63,9 @@ public final class PlayerStatsRenderer {
 
         List<Line> lines = lines(player);
         int contentX = panelX + 8;
-        int contentY = panelY + CONTENT_TOP;
+        int contentY = panelY + CONTENT_TOP + SCROLL_AREA_OFFSET_Y;
         int contentRight = panelX + panelWidth - 8;
-        int contentBottom = panelY + panelHeight - CONTENT_BOTTOM;
+        int contentBottom = panelY + panelHeight - CONTENT_BOTTOM + SCROLL_AREA_OFFSET_Y;
         int maxScroll = Math.max(0, contentHeight(lines) - (contentBottom - contentY));
         int clampedScroll = Mth.clamp(scroll, 0, maxScroll);
         String hoveredKey = null;
@@ -76,8 +76,12 @@ public final class PlayerStatsRenderer {
         int y = contentY - clampedScroll;
         for (Line line : lines) {
             if (line.category()) {
-                if (y + CATEGORY_HEIGHT > contentY && y < contentBottom) drawCategory(graphics, minecraft, contentX, contentRight, y, line.label());
-                y += CATEGORY_HEIGHT;
+                int titleHeight = line.subcategory() ? ROW_HEIGHT : CATEGORY_HEIGHT;
+                if (y + titleHeight > contentY && y < contentBottom) {
+                    if (line.subcategory()) drawSubcategory(graphics, minecraft, contentX, contentRight, y, line.label());
+                    else drawCategory(graphics, minecraft, contentX, contentRight, y, line.label());
+                }
+                y += titleHeight;
                 continue;
             }
             if (y + ROW_HEIGHT > contentY && y < contentBottom) {
@@ -99,7 +103,8 @@ public final class PlayerStatsRenderer {
 
     public static boolean contains(int panelX, int panelY, int panelWidth, int panelHeight, double mouseX, double mouseY) {
         return mouseX >= panelX + 8 && mouseX <= panelX + panelWidth - 8
-                && mouseY >= panelY + CONTENT_TOP && mouseY <= panelY + panelHeight - CONTENT_BOTTOM;
+                && mouseY >= panelY + CONTENT_TOP + SCROLL_AREA_OFFSET_Y
+                && mouseY <= panelY + panelHeight - CONTENT_BOTTOM + SCROLL_AREA_OFFSET_Y;
     }
 
     private static List<Line> lines(Player player) {
@@ -123,36 +128,12 @@ public final class PlayerStatsRenderer {
         }
 
         lines.add(Line.category("Skills"));
-        for (SkillId id : SkillId.values()) {
-            lines.add(Line.skill(id, skills));
+        for (SkillCategory category : SkillCategory.values()) {
+            lines.add(Line.subcategory(category.title()));
+            for (SkillId id : SkillId.values()) {
+                if (id.category() == category) lines.add(Line.skill(id, skills));
+            }
         }
-
-        lines.add(Line.category("Combat"));
-        lines.add(Line.stat("strength", "Strength", "+" + fmt(SkillBalance.strengthDamage(skills.level(SkillId.STRENGTH))), 0xFFE8B0A0, "Strength skill"));
-        lines.add(Line.stat("power", "Power", "+" + fmt(SkillBalance.powerDamage(skills.level(SkillId.POWER))), 0xFFE8B0A0, "Power skill"));
-        lines.add(Line.stat("crit", "Critical Power", "+" + fmt(SkillBalance.critPowerDamage(skills.level(SkillId.CRIT_POWER))), 0xFFFFD580, "Critical Power skill"));
-        lines.add(Line.stat("attack_speed", "Attack Speed", percent(SkillBalance.attackSpeed(skills.level(SkillId.ATTACK_SPEED))), 0xFF99FFB6, "Attack Speed skill"));
-        lines.add(Line.stat("haste", "Mining Speed", "+" + fmt(SkillBalance.hasteBreakSpeed(skills.level(SkillId.HASTE))), 0xFF99FFB6, "Haste skill"));
-        lines.add(Line.stat("leech", "Life Leech", percent(skills.level(SkillId.HEALTH_BOOST) > 0 ? SkillBalance.lifeLeach(skills.level(SkillId.LUCK)) : 0.0D), 0xFFFF9CC8, "Health Boost and Luck skills"));
-        lines.add(Line.stat("regeneration", "Regeneration", fmt(SkillBalance.regenHeartsPerSecond(skills.level(SkillId.REGENERATION))) + " hearts/s", 0xFFFF9CC8, "Regeneration skill"));
-
-        lines.add(Line.category("Resistances & Effects"));
-        lines.add(Line.stat("resistance", "General Resistance", percent(SkillBalance.resistance(skills.level(SkillId.RESISTANCE))), 0xFF8CC7FF, "Resistance skill"));
-        lines.add(Line.stat("fire_resistance", "Fire Resistance", percent(SkillBalance.fireResistance(skills.level(SkillId.FIRE_RESISTANCE))), 0xFF8CC7FF, "Fire Resistance skill"));
-        lines.add(Line.stat("projectile_resistance", "Projectile Resistance", percent(SkillBalance.projectileResistance(skills.level(SkillId.PROJECTILE_RESISTANCE))), 0xFF8CC7FF, "Projectile Resistance skill"));
-        lines.add(Line.stat("blast_resistance", "Blast Resistance", percent(SkillBalance.blastResistance(skills.level(SkillId.BLAST_RESISTANCE))), 0xFF8CC7FF, "Blast Resistance skill"));
-        lines.add(Line.stat("knockback_resistance", "Knockback Resistance", percent(SkillBalance.knockbackResistance(skills.level(SkillId.KNOCKBACK_RESISTANCE))), 0xFF8CC7FF, "Knockback Resistance skill"));
-        lines.add(Line.stat("effect_avoidance", "Negative Effect Avoidance", percent(SkillBalance.cleanseImmunities(skills.level(SkillId.CLEANSE))), 0xFFFF9CC8, "Cleanse skill reduces negative effects"));
-
-        lines.add(Line.category("Luck & Gathering"));
-        lines.add(Line.stat("luck", "Luck", "+" + fmt(SkillBalance.luck(skills.level(SkillId.LUCK))), 0xFFFFE08A, "Luck skill"));
-        lines.add(Line.stat("looting", "Looting Bonus", percent(SkillBalance.lootingChance(skills.level(SkillId.LOOTING))), 0xFFFFE08A, "Looting skill"));
-        lines.add(Line.stat("looting_enchant", "Looting", Integer.toString(toolEnchantmentLevel(player, LOOTING_ENCHANT)), 0xFFFFE08A, "Main-hand tool enchantment"));
-        lines.add(Line.stat("fortune", "Fortune", Integer.toString(toolEnchantmentLevel(player, FORTUNE_ENCHANT)), 0xFFFFE08A, "Main-hand tool enchantment"));
-        lines.add(Line.stat("fishing", "Fishing Luck", "+" + fmt(SkillBalance.luckOfTheSea(skills.level(SkillId.LUCK_OF_THE_SEA))), 0xFFFFE08A, "Luck of the Sea skill"));
-        lines.add(Line.stat("xp", "Experience Gain", "+" + skills.level(SkillId.XP_FORTUNE) * 50 + "%", 0xFFFFE08A, "XP Fortune skill"));
-        lines.add(Line.stat("swimming", "Swimming Speed", percent(SkillBalance.swimmingSpeed(skills.level(SkillId.SWIMMING_SPEED))), 0xFF99FFB6, "Swimming Speed skill"));
-        lines.add(Line.stat("leaping", "Leap Height", "+" + fmt(SkillBalance.leapingBonus(skills.level(SkillId.LEAPING))), 0xFF99FFB6, "Leaping skill"));
 
         lines.add(Line.category("Ability Affinities"));
         for (AbilityElement element : AbilityElement.values()) {
@@ -229,7 +210,7 @@ public final class PlayerStatsRenderer {
 
     private static int contentHeight(List<Line> lines) {
         int height = 0;
-        for (Line line : lines) height += line.category() ? CATEGORY_HEIGHT : ROW_HEIGHT;
+        for (Line line : lines) height += line.category() ? (line.subcategory() ? ROW_HEIGHT : CATEGORY_HEIGHT) : ROW_HEIGHT;
         return height;
     }
 
@@ -238,6 +219,12 @@ public final class PlayerStatsRenderer {
         drawScaled(graphics, minecraft, title, x + 1, y + 1, 0xFFFFD879, 0.65F);
         int lineX = x + 5 + Math.round(minecraft.font.width(title) * 0.65F);
         graphics.fillGradient(lineX, y + 5, right - 2, y + 6, 0xC0D39B45, 0x00D39B45);
+    }
+
+    private static void drawSubcategory(GuiGraphics graphics, Minecraft minecraft, int x, int right, int y, String title) {
+        drawScaled(graphics, minecraft, title, x + 2, y + 1, 0xFF9B7327, 0.60F);
+        int lineX = x + 5 + Math.round(minecraft.font.width(title) * 0.60F);
+        graphics.fillGradient(lineX, y + 4, right - 2, y + 5, 0xA075531B, 0x0075531B);
     }
 
     private static void drawRow(GuiGraphics graphics, Minecraft minecraft, int x, int right, int y, Line line, boolean hovered) {
@@ -268,7 +255,7 @@ public final class PlayerStatsRenderer {
         int x = centerX - Math.round(minecraft.font.width(level) * scale) / 2;
         for (int offsetX = -1; offsetX <= 1; offsetX++) {
             for (int offsetY = -1; offsetY <= 1; offsetY++) {
-                if (offsetX != 0 || offsetY != 0) drawScaled(graphics, minecraft, level, x + offsetX, y + offsetY, 0xFF5A4200, scale);
+                if (offsetX != 0 || offsetY != 0) drawScaled(graphics, minecraft, level, x + offsetX, y + offsetY, 0xFF122C5A, scale);
             }
         }
         drawScaled(graphics, minecraft, level, x, y, 0xFF72C7FF, scale);
@@ -324,22 +311,22 @@ public final class PlayerStatsRenderer {
             case POWER -> "+" + fmt(SkillBalance.powerDamage(level));
             case CRIT_POWER -> "+" + fmt(SkillBalance.critPowerDamage(level));
             case HASTE -> "+" + fmt(SkillBalance.hasteBreakSpeed(level)) + " blocks/s";
-            case RESISTANCE -> "+" + percent(SkillBalance.resistance(level)) + " resistance";
-            case FIRE_RESISTANCE -> "+" + percent(SkillBalance.fireResistance(level)) + " fire resistance";
-            case PROJECTILE_RESISTANCE -> "+" + percent(SkillBalance.projectileResistance(level)) + " projectile resistance";
-            case KNOCKBACK_RESISTANCE -> "+" + percent(SkillBalance.knockbackResistance(level)) + " knockback resistance";
-            case BLAST_RESISTANCE -> "+" + percent(SkillBalance.blastResistance(level)) + " blast resistance";
-            case AGILITY -> "+" + percent(SkillBalance.agilitySpeed(level)) + " speed";
+            case RESISTANCE -> "+" + percent(SkillBalance.resistance(level));
+            case FIRE_RESISTANCE -> "+" + percent(SkillBalance.fireResistance(level));
+            case PROJECTILE_RESISTANCE -> "+" + percent(SkillBalance.projectileResistance(level));
+            case KNOCKBACK_RESISTANCE -> "+" + percent(SkillBalance.knockbackResistance(level));
+            case BLAST_RESISTANCE -> "+" + percent(SkillBalance.blastResistance(level));
+            case AGILITY -> "+" + percent(SkillBalance.agilitySpeed(level));
             case LEAPING -> "+" + fmt(SkillBalance.leapingBonus(level)) + " jump height";
             case ATTACK_SPEED -> "+" + percent(SkillBalance.attackSpeed(level));
             case SWIMMING_SPEED -> "+" + percent(SkillBalance.swimmingSpeed(level));
             case VITALITY -> "+" + fmt(SkillBalance.vitalityHearts(level)) + " hearts";
             case REGENERATION -> "+" + fmt(SkillBalance.regenHeartsPerSecond(level)) + " hearts/s";
-            case HEALTH_BOOST -> "+" + percent(SkillBalance.lifeLeach(skills.level(SkillId.LUCK))) + " leech";
-            case CLEANSE -> "+" + percent(SkillBalance.cleanseImmunities(level)) + " effect avoidance";
-            case LUCK -> "+" + fmt(SkillBalance.luck(level)) + " luck";
-            case LOOTING -> "+" + percent(SkillBalance.lootingChance(level)) + " looting";
-            case FORTUNE -> "+" + SkillBalance.fortuneBonus(level) + " fortune";
+            case HEALTH_BOOST -> "+" + percent(SkillBalance.lifeLeach(skills.level(SkillId.LUCK)));
+            case CLEANSE -> "+" + percent(SkillBalance.cleanseImmunities(level));
+            case LUCK -> "+" + fmt(SkillBalance.luck(level));
+            case LOOTING -> "+" + percent(SkillBalance.lootingChance(level));
+            case FORTUNE -> "+" + SkillBalance.fortuneBonus(level);
             case LUCK_OF_THE_SEA -> "+" + fmt(SkillBalance.luckOfTheSea(level)) + " fishing luck";
             case XP_FORTUNE -> "+" + level * 50 + "% XP";
         };
@@ -358,25 +345,29 @@ public final class PlayerStatsRenderer {
     public record Result(int maxScroll, String hoveredKey, AbilityId hoveredAbility, SkillId hoveredSkill) {
     }
 
-    private record Line(String key, String label, String value, int color, String source, boolean category,
+    private record Line(String key, String label, String value, int color, String source, boolean category, boolean subcategory,
                         ResourceLocation icon, AbilityId ability, SkillId skill) {
         static Line category(String title) {
-            return new Line("category_" + title, title, "", 0, "", true, null, null, null);
+            return new Line("category_" + title, title, "", 0, "", true, false, null, null, null);
+        }
+
+        static Line subcategory(String title) {
+            return new Line("subcategory_" + title, title, "", 0, "", true, true, null, null, null);
         }
 
         static Line stat(String key, String label, String value, int color, String source) {
-            return new Line(key, label, value, color, source, false, null, null, null);
+            return new Line(key, label, value, color, source, false, false, null, null, null);
         }
 
         static Line ability(AbilityId id, boolean unlocked) {
             return new Line("selected_ability_" + id.name(), id.title(), AbilityKeybinds.keyName(id), unlocked ? elementColor(id.element()) : 0xFF8D8D8D,
-                    "Open this ability", false, id.iconTexture(), id, null);
+                    "Open this ability", false, false, id.iconTexture(), id, null);
         }
 
         static Line skill(SkillId id, PlayerSkills skills) {
             int level = skills.level(id);
             return new Line("selected_skill_" + id.name(), id.title(), skillEffect(id, skills),
-                    level > 0 ? skillColor(id) : 0xFF8D8D8D, "Open this skill", false, id.icon(), null, id);
+                    level > 0 ? skillColor(id) : 0xFF8D8D8D, "Open this skill", false, false, id.icon(), null, id);
         }
     }
 }

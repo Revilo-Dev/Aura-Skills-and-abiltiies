@@ -20,14 +20,16 @@ public final class IcicleParticle extends TextureSheetParticle {
 
     private IcicleParticle(ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed, SpriteSet sprites) {
         super(level, x, y, z);
-        this.gravity = 0.45F;
+        this.gravity = 0.0F;
         this.friction = 1.0F;
         this.sprites = sprites;
-        this.xd = 0.0D;
-        this.yd = -0.3D;
-        this.zd = 0.0D;
-        this.quadSize = 0.15F;
-        this.lifetime = (int) (16.0D / (this.random.nextFloat() * 0.8D + 0.2D)) + 2;
+        this.xd = xSpeed;
+        this.yd = ySpeed;
+        this.zd = zSpeed;
+        this.quadSize = 0.42F;
+        this.lifetime = 8;
+        this.roll = (float) (Math.PI * 0.5D);
+        this.oRoll = this.roll;
         this.setSpriteFromAge(sprites);
     }
 
@@ -40,8 +42,6 @@ public final class IcicleParticle extends TextureSheetParticle {
     public void tick() {
         super.tick();
         this.setSpriteFromAge(this.sprites);
-        this.xd = 0.0D;
-        this.zd = 0.0D;
     }
 
     @Override
@@ -49,6 +49,7 @@ public final class IcicleParticle extends TextureSheetParticle {
         Quaternionf rotation = new Quaternionf();
         this.getFacingCameraMode().setRotation(rotation, camera, partialTick);
         if (this.roll != 0.0F) rotation.rotateZ(Mth.lerp(partialTick, this.oRoll, this.roll));
+        rotation.rotateY((float) (Math.PI * 0.5D));
 
         Vec3 cameraPosition = camera.getPosition();
         float x = (float) (Mth.lerp(partialTick, this.xo, this.x) - cameraPosition.x());

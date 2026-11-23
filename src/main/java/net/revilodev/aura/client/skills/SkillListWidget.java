@@ -65,6 +65,7 @@ public final class SkillListWidget extends AbstractWidget {
     private final List<Node> nodes = new ArrayList<>();
     private SkillId selected;
     private SkillId hoveredSkill;
+    private SkillId rejectedSkill;
     private boolean headerVisible = true;
     private int unavailableClickShakeUntil;
 
@@ -193,8 +194,7 @@ public final class SkillListWidget extends AbstractWidget {
             } else {
                 tex = (selected == def.id() || hovered) ? WIDGET_HOVER_TEX : WIDGET_TEX;
             }
-            boolean unavailable = tex.equals(WIDGET_DISABLED_TEX) || tex.equals(WIDGET_DISABLED_HOVER_TEX) || tex.equals(WIDGET_PRIMARY_DISABLED_TEX);
-            int shakeX = hovered && unavailable && mc.player.tickCount < unavailableClickShakeUntil
+            int shakeX = hovered && def.id() == rejectedSkill && mc.player.tickCount < unavailableClickShakeUntil
                     ? (int) Math.round(Math.sin(mc.player.tickCount * 1.8D)) : 0;
             float hoverScale = hovered ? 1.05F : 1.0F;
             gg.pose().pushPose();
@@ -208,7 +208,7 @@ public final class SkillListWidget extends AbstractWidget {
             if (hovered) {
                 currentHoveredSkill = def.id();
                 if (hoveredSkill != def.id()) {
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.45F, 1.6F));
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.002F, 1.90F));
                 }
                 Component name = Component.literal(def.title()).withStyle(def.primary() ? ChatFormatting.GOLD : ChatFormatting.WHITE);
                 hoveredTooltip = List.of(
@@ -255,7 +255,8 @@ public final class SkillListWidget extends AbstractWidget {
 
         if (!AuraClientConfig.skillEnabled(node.def.id()) || CodexAttributes.isAbilitySkillEditLocked(mc.player)
                 || (!node.def.primary() && !mc.player.getData(SkillsAttachments.PLAYER_SKILLS.get()).canUnlock(node.def.id()))) {
-            unavailableClickShakeUntil = mc.player.tickCount + 8;
+            reject(node.def.id());
+            return true;
         }
 
         // select first then send action
@@ -269,6 +270,12 @@ public final class SkillListWidget extends AbstractWidget {
             PacketDistributor.sendToServer(new SkillsNetwork.SkillActionPayload(node.def.id().ordinal(), false));
         }
         return true;
+    }
+
+    private void reject(SkillId id) {
+        rejectedSkill = id;
+        unavailableClickShakeUntil = mc.player.tickCount + 8;
+        mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.002F, 1.15F));
     }
 
     @Override
