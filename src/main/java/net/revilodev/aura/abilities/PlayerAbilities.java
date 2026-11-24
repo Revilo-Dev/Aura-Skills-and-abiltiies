@@ -58,6 +58,9 @@ public final class PlayerAbilities implements INBTSerializable<CompoundTag> {
         int cur = rank(id);
         if (!free) points -= upgradeCost(id);
         ranks.put(id, cur + 1);
+        if (cur == 0 && id.isCore()) {
+            selectFirstSpecialization(id.element());
+        }
         return true;
     }
 
@@ -170,6 +173,16 @@ public final class PlayerAbilities implements INBTSerializable<CompoundTag> {
         if (id == null || !id.isSpecialization()) return false;
         selectedSpecializations.put(id.element(), id);
         return true;
+    }
+
+    private void selectFirstSpecialization(AbilityElement element) {
+        if (selectedSpecializations.containsKey(element)) return;
+        for (AbilityId id : AbilityId.values()) {
+            if (id.element() == element && id.isSpecialization() && AbilityConfig.enabled(id)) {
+                selectedSpecializations.put(element, id);
+                return;
+            }
+        }
     }
 
     /** Removes a selection when its core ability mastery no longer meets the lock level. */

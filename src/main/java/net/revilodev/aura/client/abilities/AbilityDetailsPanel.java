@@ -6,8 +6,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -270,8 +272,10 @@ public final class AbilityDetailsPanel extends AbstractWidget {
         int cooldownTicks = AbilityScaling.cooldownTicks(id, level, skills, mc.player);
         out.add(new StatPart("Cooldown " + formatSeconds(cooldownTicks), 0xF0D15C));
 
-        String durationText = "Duration " + formatSeconds(AbilityScaling.durationTicks(id, level, 1.0D));
-        String thirdText = "DPS " + formatDps(AbilityScaling.damage(id, level, 1.0D), AbilityScaling.durationTicks(id, level, 1.0D));
+        int effectDuration = AbilityScaling.durationTicks(id, level, 1.0D);
+        float directDamage = AbilityScaling.inflictedDamage(id, level, finalForm, 1.0F);
+        String durationText = "Effect " + formatSeconds(effectDuration);
+        String thirdText = "Damage " + fmt(directDamage) + elementalDamageText(id, effectDuration, finalForm);
 
         if (id == AbilityId.WIND_DASH) {
             durationText = null;
@@ -281,19 +285,23 @@ public final class AbilityDetailsPanel extends AbstractWidget {
             thirdText = level >= id.core().maxRank() ? "Extra jumps 2" : "Extra jumps 1";
         } else if (id == AbilityId.WIND_LUNGE) {
             durationText = "Distance " + fmt(AbilityScaling.radius(id, level, 1.0D) + 4.0D);
-            thirdText = "Landing shockwave " + fmt(AbilityScaling.damage(id, level, 1.0D) * 0.7D);
+            thirdText = "Hit " + fmt(AbilityScaling.inflictedDamage(id, level, finalForm, finalForm ? 1.75F : 1.25F))
+                    + " | Landing " + fmt(AbilityScaling.inflictedDamage(id, level, finalForm, finalForm ? 1.15F : 0.7F));
         } else if (id == AbilityId.BLOOD_HEAL) {
             durationText = null;
             thirdText = "Health " + fmt(AbilityScaling.damage(id, level, 1.0D) * 0.6D);
         } else if (id == AbilityId.BLOOD_CLEANSE) {
             durationText = null;
+            thirdText = "Health " + fmt(Math.max(1.0F, AbilityScaling.damage(id, level, 1.0D) * 0.35F));
         } else if (id == AbilityId.BLOOD_BURST) {
             double cost = AbilityScaling.damage(id, level, 1.0D);
             durationText = "Health Cost " + fmt(cost);
-            thirdText = "Damage " + fmt(cost) + " x" + AbilityScaling.burstProjectiles(level, finalForm);
+            thirdText = "Damage " + fmt(AbilityScaling.inflictedDamage(id, level, finalForm, 1.0F))
+                    + " x" + AbilityScaling.burstProjectiles(id, level, finalForm);
         } else if (id == AbilityId.BLOOD_DRAIN) {
             durationText = "Duration " + formatSeconds(AbilityScaling.durationTicks(id, level, 1.0D));
-            thirdText = "Drain " + fmt(Math.max(1.0D, AbilityScaling.damage(id, level, 1.0D) * 0.35D)) + "/0.5s";
+            thirdText = "Drain " + fmt(Math.max(1.0F, AbilityScaling.damage(id, level, 1.0D) * 0.35F)
+                    * (1.0D + AbilityScaling.masteryDamageBonus(level))) + "/0.5s";
         } else if (id == AbilityId.FORCE_RAMPAGE) {
             int coreRank = Math.max(1, level);
             int strengthAmp = Math.min(4, coreRank / 2);
@@ -304,24 +312,43 @@ public final class AbilityDetailsPanel extends AbstractWidget {
                     + formatSeconds(AbilityScaling.aegisCooldownTicks(level));
         } else if (id == AbilityId.FORCE_SHOCKWAVE) {
             durationText = "Waves " + Math.max(1, level) + " | Duration " + formatSeconds(AbilityScaling.shockwaveDurationTicks(level, finalForm));
-            thirdText = "Width " + fmt(AbilityScaling.radius(id, level, 1.0D)) + " | Distance " + fmt(AbilityScaling.shockwaveDistance(level, 1.0D, finalForm));
+            thirdText = "Damage " + fmt(AbilityScaling.inflictedDamage(id, level, finalForm, finalForm ? 1.5F : 1.0F))
+                    + " (falloff) | Distance " + fmt(AbilityScaling.shockwaveDistance(level, 1.0D, finalForm));
+        } else if (id == AbilityId.LIGHTNING_STRIKE) {
+            thirdText = "Damage " + fmt(AbilityScaling.inflictedDamage(id, level, finalForm, 1.2F));
+        } else if (id == AbilityId.LIGHTNING_ZAP) {
+            durationText = "Targets " + (2 + Math.max(0, level) * 2);
+            thirdText = "Damage " + fmt(AbilityScaling.inflictedDamage(id, level, finalForm, 0.5F));
         } else if (id.specialization() == AbilitySpecialization.NOVA) {
             durationText = "Duration " + formatSeconds(AbilityScaling.auraDurationTicks(level, finalForm));
-            thirdText = "Radius " + fmt(AbilityScaling.auraRadius(level, finalForm));
+            thirdText = "Damage " + fmt(directDamage * 0.45F) + "/s";
+        } else if (id.specialization() == AbilitySpecialization.STORM) {
+            float tickDamage = id == AbilityId.LIGHTNING_STORM
+                    ? 2.5F * (float) (1.0D + AbilityScaling.masteryDamageBonus(level)) * (finalForm ? 1.5F : 1.0F)
+                    : directDamage * 0.6F;
+            thirdText = "Damage " + fmt(tickDamage * 2.0F) + "/s";
         }
 
         if (id.specialization() == AbilitySpecialization.IMPLODE) {
             durationText = "Radius " + fmt(AbilityScaling.radius(id, level, 1.0D) + 1.0D);
+            thirdText = "Damage " + fmt(directDamage * (id.element() == net.revilodev.aura.abilities.AbilityElement.FORCE ? 0.75F : 1.0F))
+                    + elementalDamageText(id, effectDuration, finalForm);
         } else if (id.specialization() == AbilitySpecialization.BURST && id != AbilityId.BLOOD_BURST) {
             if (id == AbilityId.FIRE_BURST || id == AbilityId.ICE_BURST || id == AbilityId.POISON_BURST) {
-                durationText = "Projectiles " + AbilityScaling.burstProjectiles(level, finalForm);
+                int projectiles = AbilityScaling.burstProjectiles(id, level, finalForm);
+                durationText = "Projectiles " + projectiles;
+                thirdText = "Damage " + fmt(AbilityScaling.inflictedDamage(id, level, finalForm,
+                        id == AbilityId.FIRE_BURST && finalForm ? 1.5F : 1.0F)) + " x" + projectiles
+                        + elementalDamageText(id, effectDuration, finalForm);
             } else if (id == AbilityId.FORCE_BURST) {
                 durationText = "Projectiles 1";
+                thirdText = "Damage " + fmt(AbilityScaling.inflictedDamage(id, level, finalForm, finalForm ? 1.6F : 1.25F));
             }
         }
 
         if (id == AbilityId.ICE_PIERCE) {
             durationText = "Projectiles " + AbilityScaling.pierceProjectiles(level);
+            thirdText = "Damage " + fmt(directDamage) + " x" + AbilityScaling.pierceProjectiles(level);
         }
 
         if (durationText != null && !durationText.isEmpty()) {
@@ -363,6 +390,14 @@ public final class AbilityDetailsPanel extends AbstractWidget {
         double seconds = Math.max(0.05D, durationTicks / 20.0D);
         double dps = damage / seconds;
         return String.format(java.util.Locale.ROOT, "%.1fhp", dps);
+    }
+
+    private static String elementalDamageText(AbilityId id, int durationTicks, boolean finalForm) {
+        return switch (id.element()) {
+            case FIRE -> " + Burn " + fmt(AbilityScaling.fireDamage(durationTicks, finalForm));
+            case POISON -> " + " + (finalForm ? "Toxin " : "Poison ") + fmt(AbilityScaling.poisonDamage(durationTicks, finalForm));
+            default -> "";
+        };
     }
 
     private static String fmt(double value) {
@@ -439,7 +474,10 @@ public final class AbilityDetailsPanel extends AbstractWidget {
         @Override
         public void onPress() {
             if (!active || ability == null || AuraClientConfig.blockAbilitySwitching()) return;
+            PlayerAbilities abilities = mc.player == null ? null : mc.player.getData(AbilitiesAttachments.PLAYER_ABILITIES.get());
+            if (abilities == null || abilities.selectedSpecialization(ability.id().element()) == ability.id()) return;
             PacketDistributor.sendToServer(new AbilitiesNetwork.AbilityActionPayload(2, ability.id().ordinal()));
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
         }
 
         @Override

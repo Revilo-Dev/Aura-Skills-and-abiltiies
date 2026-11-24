@@ -96,6 +96,29 @@ public final class AbilityScaling {
         return 1 + Math.max(0, coreRank) + (finalForm ? 2 : 0);
     }
 
+    public static int burstProjectiles(AbilityId id, int coreRank, boolean finalForm) {
+        if (id == AbilityId.POISON_BURST) {
+            return 3 + Math.max(0, coreRank - 1) * 2 + (finalForm ? 2 : 0);
+        }
+        return burstProjectiles(coreRank, finalForm);
+    }
+
+    public static float inflictedDamage(AbilityId id, int coreRank, boolean finalForm, float multiplier) {
+        float damage = damage(id, coreRank, 1.0D) * multiplier;
+        damage *= (float) (1.0D + masteryDamageBonus(coreRank));
+        if (finalForm && id.element() == AbilityElement.LIGHTNING) damage *= 1.5F;
+        return damage;
+    }
+
+    public static double fireDamage(int durationTicks, boolean finalForm) {
+        return Math.max(1, durationTicks / 20) * (finalForm ? 2.0D : 1.0D);
+    }
+
+    public static double poisonDamage(int durationTicks, boolean finalForm) {
+        if (finalForm) return (durationTicks / 10) * 2.0D;
+        return durationTicks / 12;
+    }
+
     public static int pierceProjectiles(int coreRank) {
         return 1 + Math.max(0, coreRank / 2);
     }

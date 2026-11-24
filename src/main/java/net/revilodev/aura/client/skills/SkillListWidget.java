@@ -207,9 +207,6 @@ public final class SkillListWidget extends AbstractWidget {
             gg.pose().popPose();
             if (hovered) {
                 currentHoveredSkill = def.id();
-                if (hoveredSkill != def.id()) {
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 0.002F, 1.90F));
-                }
                 Component name = Component.literal(def.title()).withStyle(def.primary() ? ChatFormatting.GOLD : ChatFormatting.WHITE);
                 hoveredTooltip = List.of(
                         Component.empty()
@@ -217,7 +214,7 @@ public final class SkillListWidget extends AbstractWidget {
                                 .append(Component.literal(" "))
                                 .append(Component.translatable("gui.aura.level.short", ps.level(def.id())).withStyle(ChatFormatting.AQUA)),
                         Component.literal(def.description()).withStyle(ChatFormatting.GRAY),
-                        Component.literal(creative ? "| Free in Creative" : "| " + pointText(1)).withStyle(ChatFormatting.GREEN)
+                        Component.literal(creative ? "| Free" : "| " + pointText(1)).withStyle(ChatFormatting.GREEN)
                 );
             }
         }

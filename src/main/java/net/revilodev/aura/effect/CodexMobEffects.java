@@ -26,6 +26,16 @@ public final class CodexMobEffects {
                             }));
     public static final Holder<MobEffect> PERMAFROST = REGISTER.register("permafrost", PermafrostEffect::new);
     public static final Holder<MobEffect> TOXIN = REGISTER.register("toxin", ToxinEffect::new);
+    public static final Holder<MobEffect> ELECTROCUTED = REGISTER.register("electrocuted", () ->
+            new ElectrocutedEffect()
+                    .addAttributeModifier(Attributes.MOVEMENT_SPEED,
+                            ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "electrocuted_move_speed"),
+                            AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL,
+                            amplifier -> amplifier > 0 ? 0.15D : 0.10D)
+                    .addAttributeModifier(Attributes.ATTACK_DAMAGE,
+                            ResourceLocation.fromNamespaceAndPath(CodexMod.MOD_ID, "electrocuted_attack_damage"),
+                            AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL,
+                            amplifier -> amplifier > 0 ? -0.15D : -0.10D));
     public static final Holder<MobEffect> COOLDOWN_RESET = REGISTER.register("cooldown_reset", CooldownResetEffect::new);
     // raging effect functionality: vanilla attack damage and speed effects
     public static final Holder<MobEffect> RAMPAGING = REGISTER.register("rampaging", () ->

@@ -16,18 +16,27 @@ import net.revilodev.aura.abilities.logic.AbilityLogic;
 import net.revilodev.aura.entity.ModEntities;
 import net.revilodev.aura.particle.ModParticles;
 
+import java.util.HashSet;
+import java.util.Set;
+
 // burst cube projectile
 public final class BurstCubeProjectile extends ThrowableProjectile {
     private static final EntityDataAccessor<Integer> ELEMENT = SynchedEntityData.defineId(BurstCubeProjectile.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> DAMAGE = SynchedEntityData.defineId(BurstCubeProjectile.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> DURATION = SynchedEntityData.defineId(BurstCubeProjectile.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> FINAL_FORM = SynchedEntityData.defineId(BurstCubeProjectile.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> REMAINING_HITS = SynchedEntityData.defineId(BurstCubeProjectile.class, EntityDataSerializers.INT);
+    private final Set<Integer> hitEntityIds = new HashSet<>();
 
     public BurstCubeProjectile(EntityType<? extends BurstCubeProjectile> type, Level level) {
         super(type, level);
     }
 
     public BurstCubeProjectile(Level level, LivingEntity owner, AbilityElement element, float damage, int duration, boolean finalForm) {
+        this(level, owner, element, damage, duration, finalForm, 1);
+    }
+
+    public BurstCubeProjectile(Level level, LivingEntity owner, AbilityElement element, float damage, int duration, boolean finalForm, int remainingHits) {
         this(ModEntities.BURST_CUBE.get(), level);
         setOwner(owner);
         setPos(owner.getX(), owner.getEyeY() - 0.1D, owner.getZ());
@@ -35,6 +44,7 @@ public final class BurstCubeProjectile extends ThrowableProjectile {
         setDamage(damage);
         setDuration(duration);
         setFinalForm(finalForm);
+        setRemainingHits(Math.max(1, remainingHits));
     }
 
     @Override
@@ -43,6 +53,7 @@ public final class BurstCubeProjectile extends ThrowableProjectile {
         builder.define(DAMAGE, 1.0F);
         builder.define(DURATION, 40);
         builder.define(FINAL_FORM, false);
+        builder.define(REMAINING_HITS, 1);
     }
 
     @Override
@@ -52,7 +63,7 @@ public final class BurstCubeProjectile extends ThrowableProjectile {
             discard();
             return;
         }
-        if (level() instanceof ServerLevel level) {
+        if (level() instanceof ServerLevel level && element() != AbilityElement.POISON) {
             var particle = switch (element()) {
                 case ICE -> finalForm() ? ModParticles.FROST_AURA_EMBER_LIGHT.get() : ModParticles.ICE_AURA_EMBER_LIGHT.get();
                 case POISON -> finalForm() ? ModParticles.TOXIN_AURA_EMBER_LIGHT.get() : ModParticles.POISON_AURA_EMBER_LIGHT.get();
@@ -69,10 +80,11 @@ public final class BurstCubeProjectile extends ThrowableProjectile {
     protected void onHitEntity(EntityHitResult result) {
         super.onHitEntity(result);
         if (!(getOwner() instanceof ServerPlayer player)) return;
-        if (result.getEntity() instanceof LivingEntity living) {
-            AbilityLogic.applyElementHit(player, element(), living, damage(), duration(), finalForm());
-        }
-        discard();
+        if (!(result.getEntity() instanceof LivingEntity living) || !hitEntityIds.add(living.getId())) return;
+        AbilityLogic.applyElementHit(player, element(), living, damage(), duration(), finalForm());
+        int hitsLeft = remainingHits() - 1;
+        setRemainingHits(hitsLeft);
+        if (hitsLeft <= 0) discard();
     }
 
     @Override
@@ -121,5 +133,13 @@ public final class BurstCubeProjectile extends ThrowableProjectile {
 
     public void setFinalForm(boolean finalForm) {
         entityData.set(FINAL_FORM, finalForm);
+    }
+
+    public int remainingHits() {
+        return entityData.get(REMAINING_HITS);
+    }
+
+    public void setRemainingHits(int remainingHits) {
+        entityData.set(REMAINING_HITS, Math.max(0, remainingHits));
     }
 }

@@ -121,7 +121,7 @@ public final class AbilityKeybinds {
         for (KeyMapping key : UNIQUE_KEYS) event.register(key);
     }
 
-    private static void onClientTick(ClientTickEvent.Post event) {
+    private static void onClientTick(ClientTickEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         if (AuraClientConfig.disableSkillsAndAbilities()) return;

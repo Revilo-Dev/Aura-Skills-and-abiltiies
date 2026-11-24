@@ -291,7 +291,7 @@ public final class AbilityLogic {
                 pushAwayFrom(player, target, (1.05D + coreRank * 0.06D) * ap * (finalForm ? 1.75D : 1.0D));
             }
             if (player.level() instanceof ServerLevel level) {
-                spawnElementBurst(level, player.position().add(0.0D, 0.6D, 0.0D), AbilityElement.FORCE, finalForm);
+                spawnElementBurst(level, player.position().add(0.0D, 0.6D, 0.0D), AbilityElement.FORCE, finalForm, radius);
             }
             fx(player, particleForElement(AbilityElement.FORCE, finalForm), SoundEvents.GENERIC_EXPLODE.value());
             return true;
@@ -322,7 +322,7 @@ public final class AbilityLogic {
     }
 
     private static void launchBurstProjectiles(ServerPlayer player, AbilityId id, int coreRank, float damage, double abilityPower, boolean finalForm) {
-        int projectiles = AbilityScaling.burstProjectiles(coreRank, finalForm);
+        int projectiles = AbilityScaling.burstProjectiles(id, coreRank, finalForm);
         double stepDeg = 15.0D;
         double half = (projectiles - 1) * 0.5D;
         Vec3 look = player.getLookAngle().normalize();
@@ -345,7 +345,8 @@ public final class AbilityLogic {
     }
 
     private static boolean implode(ServerPlayer player, AbilityId id, int coreRank, double abilityPower, boolean finalForm) {
-        List<LivingEntity> targets = nearby(player, AbilityScaling.radius(id, coreRank, abilityPower) + 1.0D);
+        double radius = AbilityScaling.radius(id, coreRank, abilityPower) + 1.0D;
+        List<LivingEntity> targets = nearby(player, radius);
         float damageScale = id.element() == AbilityElement.FORCE ? 0.75F : 1.0F;
         double pullStrength = id.element() == AbilityElement.FORCE ? (0.3D + coreRank * 0.03D) : (0.5D + coreRank * 0.05D);
         pullStrength *= powerScale(abilityPower);
@@ -356,7 +357,7 @@ public final class AbilityLogic {
             if (id == AbilityId.LIGHTNING_IMPLODE && player.level() instanceof ServerLevel level) strikeLightning(level, target.getX(), target.getY(), target.getZ(), finalForm);
         }
         if (id.element() == AbilityElement.FORCE && player.level() instanceof ServerLevel level) {
-            for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(AbilityScaling.radius(id, coreRank, abilityPower) + 1.0D))) {
+            for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(radius))) {
                 pullEntityToward(player, item, pullStrength);
             }
         }
@@ -367,9 +368,9 @@ public final class AbilityLogic {
         ParticleOptions implosionParticle = auraParticle(id.element(), finalForm, 0.25D, FireAuraEffectConfig.settings());
         if (player.level() instanceof ServerLevel level) {
             if (id.element() == AbilityElement.FORCE) {
-                spawnImplosionSphere(level, player.position().add(0.0D, 0.6D, 0.0D), id.element(), finalForm);
+                spawnImplosionSphere(level, player.position().add(0.0D, 0.6D, 0.0D), id.element(), finalForm, radius);
             } else {
-                spawnElementBurst(level, player.position().add(0.0D, 0.6D, 0.0D), id.element(), finalForm);
+                spawnElementBurst(level, player.position().add(0.0D, 0.6D, 0.0D), id.element(), finalForm, radius);
             }
         }
         fx(player, implosionParticle, SoundEvents.GENERIC_EXPLODE.value());
@@ -386,23 +387,15 @@ public final class AbilityLogic {
     private static boolean pierce(ServerPlayer player, AbilityId id, int coreRank, double abilityPower, boolean finalForm) {
         int projectiles = AbilityScaling.pierceProjectiles(coreRank);
         int pierceCount = Math.max(1, coreRank);
-        double hitRadius = 0.35D + (coreRank * 0.08D);
-        Vec3 eye = player.getEyePosition();
         Vec3 look = player.getLookAngle().normalize();
-        double range = AbilityScaling.radius(id, coreRank, abilityPower) + 10.0D;
         float damage = AbilityScaling.damage(id, coreRank, abilityPower);
         int duration = AbilityScaling.durationTicks(id, coreRank, abilityPower);
         for (int i = 0; i < projectiles; i++) {
             double angle = (i - (projectiles - 1) * 0.5D) * 5.0D;
             Vec3 direction = rotateYaw(look, angle).normalize();
-            List<LivingEntity> hits = hitsOnRay(player, eye, direction, range, hitRadius, pierceCount);
-            for (LivingEntity hit : hits) {
-                applyElementHit(player, id.element(), hit, damage, duration, finalForm);
-            }
-            if (player.level() instanceof ServerLevel level) {
-                level.sendParticles(ModParticles.ICICLE.get(), eye.x, eye.y, eye.z, 0,
-                        direction.x * 1.6D, direction.y * 1.6D, direction.z * 1.6D, 1.0D);
-            }
+            BurstCubeProjectile projectile = new BurstCubeProjectile(player.level(), player, id.element(), damage, duration, finalForm, pierceCount);
+            projectile.shoot(direction.x, direction.y, direction.z, 1.6F, 0.0F);
+            player.level().addFreshEntity(projectile);
         }
         if (player.level() instanceof ServerLevel level) {
             level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 0.45F, 1.35F);
@@ -510,10 +503,11 @@ public final class AbilityLogic {
                 if (finalForm) target.addEffect(new MobEffectInstance(CodexMobEffects.PERMAFROST, 120, 0, false, true, true));
             }
             case LIGHTNING -> {
+                target.addEffect(new MobEffectInstance(CodexMobEffects.ELECTROCUTED, duration, finalForm ? 1 : 0, false, true, true));
                 if (player.level() instanceof ServerLevel level) {
                     level.sendParticles(lightningStrikeParticle(finalForm), target.getX(), target.getY() + target.getBbHeight() * 0.5D, target.getZ(), 16, 0.3D, 0.45D, 0.3D, 0.025D);
                 }
-                if (finalForm) plasmaExplosion(player, target, damage * 0.5F);
+                if (finalForm) plasmaExplosion(player, target, damage * 0.5F, duration);
             }
             case POISON -> {
                 target.addEffect(new MobEffectInstance(finalForm ? CodexMobEffects.TOXIN : MobEffects.POISON, duration, finalForm ? 0 : 1, false, true, true));
@@ -525,7 +519,7 @@ public final class AbilityLogic {
                     }
                 }
             }
-            case FORCE -> pullToward(target, player, 0.6D);
+            case FORCE -> pullToward(player, target, 0.6D);
             case BLOOD -> {
                 if (finalForm) target.igniteForSeconds(10);
             }
@@ -537,14 +531,15 @@ public final class AbilityLogic {
         applyElementHit(player, element, target, damage, duration, false);
     }
 
-    private static void plasmaExplosion(ServerPlayer player, LivingEntity primary, float damage) {
+    private static void plasmaExplosion(ServerPlayer player, LivingEntity primary, float damage, int duration) {
         if (!(player.level() instanceof ServerLevel level)) return;
         for (LivingEntity nearby : level.getEntitiesOfClass(LivingEntity.class, primary.getBoundingBox().inflate(2.5D),
                 entity -> entity != player && entity != primary && entity.isAlive())) {
             hurtWithAbility(player, nearby, AbilityElement.LIGHTNING, player.damageSources().magic(), damage);
+            nearby.addEffect(new MobEffectInstance(CodexMobEffects.ELECTROCUTED, duration, 1, false, true, true));
         }
-        level.sendParticles(ModParticles.PLASMA_BLAST.get(), primary.getX(), primary.getY() + 0.8D, primary.getZ(), 24, 0.55D, 0.55D, 0.55D, 0.08D);
-        level.sendParticles(ModParticles.PLASMA_STRIKE.get(), primary.getX(), primary.getY() + 0.8D, primary.getZ(), 12, 0.4D, 0.4D, 0.4D, 0.06D);
+        level.sendParticles(ModParticles.PLASMA_BLAST.get(), primary.getX(), primary.getY() + 0.8D, primary.getZ(), 72, 2.5D, 2.5D, 2.5D, 0.08D);
+        level.sendParticles(ModParticles.PLASMA_STRIKE.get(), primary.getX(), primary.getY() + 0.8D, primary.getZ(), 36, 2.0D, 2.0D, 2.0D, 0.06D);
     }
 
     private static void pullToward(LivingEntity anchor, LivingEntity target, double strength) {
@@ -931,27 +926,31 @@ public final class AbilityLogic {
         }
     }
 
-    private static void spawnElementBurst(ServerLevel level, Vec3 center, AbilityElement element, boolean finalForm) {
+    private static void spawnElementBurst(ServerLevel level, Vec3 center, AbilityElement element, boolean finalForm, double radius) {
         FireAuraEffectSettings settings = FireAuraEffectConfig.settings();
         ParticleOptions particle = auraParticle(element, finalForm, 0.25D, settings);
-        for (int point = 0; point < 72; point++) {
-            double y = 1.0D - 2.0D * (point + 0.5D) / 72.0D;
-            double ring = Math.sqrt(1.0D - y * y);
-            double angle = Math.PI * (3.0D - Math.sqrt(5.0D)) * point;
-            double speed = 0.20D + (point % 4) * 0.030D;
-            level.sendParticles(particle, center.x, center.y, center.z, 0,
-                    Math.cos(angle) * ring * speed, y * speed, Math.sin(angle) * ring * speed, 1.0D);
-        }
-    }
-
-    private static void spawnImplosionSphere(ServerLevel level, Vec3 center, AbilityElement element, boolean finalForm) {
-        ParticleOptions particle = auraParticle(element, finalForm, 0.25D, FireAuraEffectConfig.settings());
-        for (int point = 0; point < 72; point++) {
-            double y = 1.0D - 2.0D * (point + 0.5D) / 72.0D;
+        int points = Math.max(360, (int) Math.ceil(radius * 128.0D));
+        for (int point = 0; point < points; point++) {
+            double y = 1.0D - 2.0D * (point + 0.5D) / points;
             double ring = Math.sqrt(1.0D - y * y);
             double angle = Math.PI * (3.0D - Math.sqrt(5.0D)) * point;
             Vec3 direction = new Vec3(Math.cos(angle) * ring, y, Math.sin(angle) * ring);
-            Vec3 start = center.add(direction.scale(2.8D));
+            Vec3 start = center.add(direction.scale(radius));
+            double speed = 0.10D + (point % 4) * 0.015D;
+            level.sendParticles(particle, start.x, start.y, start.z, 0,
+                    direction.x * speed, direction.y * speed, direction.z * speed, 1.0D);
+        }
+    }
+
+    private static void spawnImplosionSphere(ServerLevel level, Vec3 center, AbilityElement element, boolean finalForm, double radius) {
+        ParticleOptions particle = auraParticle(element, finalForm, 0.25D, FireAuraEffectConfig.settings());
+        int points = Math.max(360, (int) Math.ceil(radius * 128.0D));
+        for (int point = 0; point < points; point++) {
+            double y = 1.0D - 2.0D * (point + 0.5D) / points;
+            double ring = Math.sqrt(1.0D - y * y);
+            double angle = Math.PI * (3.0D - Math.sqrt(5.0D)) * point;
+            Vec3 direction = new Vec3(Math.cos(angle) * ring, y, Math.sin(angle) * ring);
+            Vec3 start = center.add(direction.scale(radius));
             level.sendParticles(particle, start.x, start.y, start.z, 0,
                     -direction.x * 0.22D, -direction.y * 0.22D, -direction.z * 0.22D, 1.0D);
         }
